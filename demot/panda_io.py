@@ -67,6 +67,10 @@ def cli():
     Decoraattorit ympäröivät alla olevan funktion:
     https://en.wikipedia.org/wiki/Python_syntax_and_semantics#Decorators
     """
+
+    # pass on pythonin null operaattori, eli ei tee mitään. Tämän funktion
+    # tarkoituksena onkin vain kertoa `click`ille, että meillä on tällainen
+    # komentoryhmä kuin `cli`.
     pass
 
 
