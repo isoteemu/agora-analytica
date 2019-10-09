@@ -1,0 +1,6 @@
+Avoin_data_eduskuntavaalit_2019_valintatiedot.csv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
