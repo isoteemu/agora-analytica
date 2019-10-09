@@ -4,3 +4,4 @@ Avoin_data_eduskuntavaalit_2019_valintatiedot.csv
 __pycache__/
 *.py[cod]
 *$py.class
+.vscode/settings.json
