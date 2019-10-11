@@ -27,9 +27,9 @@ def etäisyys(tiedosto, määrä: int):
     # Luetaan vaalidata
     vaalidata = lue_data_sisään(tiedosto)
 
-    # Otetaan kaksi ehdokasta sample() metodilla, ja heidän vastaukset.
-    # Muutetaan samalla tekstidata numeraaliseksi (`int`).
     for i in range(määrä):
+        # Otetaan kaksi ehdokasta sample() metodilla, ja heidän vastaukset.
+        # Muutetaan samalla tekstidata numeraaliseksi (`int`).
         # vertailtavat = vaalidata.head(2)
         vertailtavat = vaalidata.sample(2)
         vastaukset = vertailtavat.iloc[:, 4:33].dropna(axis=1).astype('int')
