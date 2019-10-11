@@ -5,6 +5,7 @@ Esimerkki miten ladataan data, ja luetaan se pandas -kirjaston DataFrame luokaks
 
 # tarvitaan `pandas` kirjasto
 import pandas as pd
+import numpy as np
 # Käytetään `requests` kirjastoa noutamaan data.
 import requests
 # `BytesIO` tarjoaa liiman, jolla voidaan virtuaalisena tiedostona antaa
@@ -52,7 +53,8 @@ def lataa_ylen_data(url=VAALIDATA_AINEISTO, tiedosto=VAALIDATA_TIEDOSTO) -> pd.D
 def lue_data_sisään(tiedosto) -> pd.DataFrame:
     """ Lukee datan sisään """
     data = pd.read_csv(tiedosto)
-    return data
+
+    return data.replace("-", np.NaN)
 
 
 @click.group()
