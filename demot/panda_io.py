@@ -59,7 +59,7 @@ def lue_data_sisään(tiedosto) -> pd.DataFrame:
     return data.replace("-", np.NaN)
 
 
-def generoi_nimi(määrä, etunimet, sukunimet):
+def generoi_nimi(määrä, etunimet=ETUNIMET, sukunimet=SUKUNIMET):
     """ Generoi satunnaisia nimiä.
 
     Lukee `ETUNIMET` sekä `SUKUNIMET` tiedostot, joista luo yhdistelmiä.
@@ -69,13 +69,14 @@ def generoi_nimi(määrä, etunimet, sukunimet):
     data_etunimet = pd.read_excel(etunimet)
     data_sukunimet = pd.read_excel(sukunimet)
 
+    # Skalaa nimien painoarvo 0-1 asteikolle.
     paino_etunimi = data_etunimet.iloc[:, 1] / data_etunimet.iloc[:, 1].sum()
     paino_sukunimi = data_sukunimet.iloc[:, 1] / data_sukunimet.iloc[:, 1].sum()
 
     nimet = []
 
     for i in range(määrä):
-
+        # Valitse satunnainen nimikombo. Painottaa yleisempiä nimiä.
         nimet.append(" ".join([
             np.random.choice(data_etunimet.iloc[:, 0], p=paino_etunimi),
             np.random.choice(data_sukunimet.iloc[:, 0], p=paino_sukunimi)
@@ -137,12 +138,20 @@ def listaa_puolueet(tiedosto):
     [click.echo(f" * {puolue}") for puolue in data.puolue.unique()]
 
 
-@cli.command("generoi-nimi")
-@click.option("--määrä", default=1)
+@cli.command("lisää-nimet")
+@click.argument('tiedosto', type=click.Path(exists=True), default=VAALIDATA_TIEDOSTO)
 @click.option("--etunimet", default=ETUNIMET, show_default=True, type=click.Path(exists=True))
 @click.option("--sukunimet", default=SUKUNIMET, show_default=True, type=click.Path(exists=True))
-def cli_generoi_nimi(määrä, etunimet, sukunimet):
-    click.echo(generoi_nimi(määrä, etunimet, sukunimet))
+def lisää_nimet(tiedosto, etunimet, sukunimet):
+    """ Luo satunnaisia nimiä, ja lisää tiedostoon.
+    """
+    data = lue_data_sisään(tiedosto)
+    if "nimi" not in data.columns:
+        nimet = pd.Series(generoi_nimi(data.shape[0], etunimet, sukunimet), name="nimi")
+        data.assign(nimi=nimet).to_csv(tiedosto)
+
+    else:
+        click.abort("Nimi sarake on jo olemassa.")
 
 
 if __name__ == '__main__':
