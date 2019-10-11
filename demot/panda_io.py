@@ -21,6 +21,8 @@ import click
 VAALIDATA_AINEISTO = "https://vaalit.beta.yle.fi/avoindata/avoin_data_eduskuntavaalit_2019.zip"
 VAALIDATA_TIEDOSTO = "Avoin_data_eduskuntavaalit_2019_valintatiedot.csv"
 
+ETUNIMET = "etunimitilasto-2019-08-07-vrk.xlsx"
+SUKUNIMET = "sukunimitilasto-2019-08-07-vrk.xlsx"
 
 def lataa_ylen_data(url=VAALIDATA_AINEISTO, tiedosto=VAALIDATA_TIEDOSTO) -> pd.DataFrame:
     """
@@ -55,6 +57,31 @@ def lue_data_sisään(tiedosto) -> pd.DataFrame:
     data = pd.read_csv(tiedosto)
 
     return data.replace("-", np.NaN)
+
+
+def generoi_nimi(määrä, etunimet, sukunimet):
+    """ Generoi satunnaisia nimiä.
+
+    Lukee `ETUNIMET` sekä `SUKUNIMET` tiedostot, joista luo yhdistelmiä.
+    Ensimmäinen sarake on nimi, toinen esiintymismäärä.
+    """
+
+    data_etunimet = pd.read_excel(etunimet)
+    data_sukunimet = pd.read_excel(sukunimet)
+
+    paino_etunimi = data_etunimet.iloc[:, 1] / data_etunimet.iloc[:, 1].sum()
+    paino_sukunimi = data_sukunimet.iloc[:, 1] / data_sukunimet.iloc[:, 1].sum()
+
+    nimet = []
+
+    for i in range(määrä):
+
+        nimet.append(" ".join([
+            np.random.choice(data_etunimet.iloc[:, 0], p=paino_etunimi),
+            np.random.choice(data_sukunimet.iloc[:, 0], p=paino_sukunimi)
+        ]))
+
+    return nimet
 
 
 @click.group()
@@ -108,6 +135,14 @@ def listaa_puolueet(tiedosto):
     # jollain funktiolla - `click.echo()` - joka tulostaa alkion komentoriville.
     # Vertaa print(), mutta kontekstiherkkä.
     [click.echo(f" * {puolue}") for puolue in data.puolue.unique()]
+
+
+@cli.command("generoi-nimi")
+@click.option("--määrä", default=1)
+@click.option("--etunimet", default=ETUNIMET, show_default=True, type=click.Path(exists=True))
+@click.option("--sukunimet", default=SUKUNIMET, show_default=True, type=click.Path(exists=True))
+def cli_generoi_nimi(määrä, etunimet, sukunimet):
+    click.echo(generoi_nimi(määrä, etunimet, sukunimet))
 
 
 if __name__ == '__main__':
