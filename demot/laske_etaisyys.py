@@ -16,10 +16,6 @@ import numpy as np
 import click
 
 
-def keraa_vastaukset_yle(idx, df: pd.DataFrame):
-    pass
-
-
 @click.command()
 @click.argument("tiedosto", type=click.Path(exists=True), default=VAALIDATA_TIEDOSTO)
 @click.option("--määrä", default=1)
