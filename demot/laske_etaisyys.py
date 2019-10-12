@@ -32,7 +32,7 @@ def etäisyys(tiedosto, määrä: int):
         # Muutetaan samalla tekstidata numeraaliseksi (`int`).
         # vertailtavat = vaalidata.head(2)
         vertailtavat = vaalidata.sample(2)
-        vastaukset = vertailtavat.iloc[:, 4:33].dropna(axis=1).astype('int')
+        vastaukset = vertailtavat.iloc[:, 5:33].fillna(3).astype('int')
 
         # Laske ero omalla funktiolla.
         ero_mean = laske_ero_mean(vastaukset)
