@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Esimerkki etäisyyksien laskennasta.
-
-Ottaa tiedostosta kaksi satunnaista ehdokasta, ja laskee heille etäisyyden.
-
+Testejä etäisyyksien laskennasta.
 """
 
 from panda_io import (
@@ -18,75 +15,67 @@ import click
 
 @click.command()
 @click.argument("tiedosto", type=click.Path(exists=True), default=VAALIDATA_TIEDOSTO)
-@click.option("--määrä", default=1)
-def etäisyys(tiedosto, määrä: int):
+@click.option("--määrä", default=10)
+@click.option("--menetelmä", type=click.Choice(['etäisyys_poikkeavuudella', 'etäisyys_mean']), default="etäisyys_poikkeavuudella")
+def etäisyyksiä(tiedosto, määrä: int, menetelmä):
     """
-    Laskee kahden satunnaisen ehdokkaan etäisyyden.
+    Vertailee etäisyyksiä satunnaiselle joukolle ehdokkaita.
     """
-
-    # Luetaan vaalidata
-    vaalidata = lue_data_sisään(tiedosto)
-
-    for i in range(määrä):
-        # Otetaan kaksi ehdokasta sample() metodilla, ja heidän vastaukset.
-        # Muutetaan samalla tekstidata numeraaliseksi (`int`).
-        # vertailtavat = vaalidata.head(2)
-        vertailtavat = vaalidata.sample(2)
-        vastaukset = vertailtavat.iloc[:, 4:33].fillna(3).astype('int')
-
-        # Laske ero omalla funktiolla.
-        ero_mean = laske_ero_mean(vastaukset)
-
-        click.echo("{eka} ({eka_vp}) - {toka} ({toka_vp})\tMean: {ero}".format(
-            eka=vertailtavat.iloc[0]["puolue"], eka_vp=vertailtavat.iloc[0]["vaalipiiri"],
-            toka=vertailtavat.iloc[1]["puolue"], toka_vp=vertailtavat.iloc[1]["vaalipiiri"],
-            ero=float(ero_mean)
-            ))
-
-
-def laske_ero_mean(vastaukset: pd.DataFrame):
-    """
-    Vertailee datasetin kahta viimeistä ehdokasta, ja laskee niiden etäisyyden.
-    """
-
-    # `diff()` laskee rivin eron edelliseen -> tulos jotain väliltä (1-5) – (5-1)
-    # `tail(1)` ottaa n riviä lopusta - eli viimeisen
-    # `applymap(np.abs)` muuttaa kaikki arvot positiivisiksi luvuiksi.
-    erot = vastaukset.diff().tail(1).applymap(np.abs)
-    return erot.mean(axis=1)
-
-
-@click.command()
-@click.argument("tiedosto", type=click.Path(exists=True), default=VAALIDATA_TIEDOSTO)
-def etäisyys_poikkeavuudella(tiedosto):
-    """
-    Laskee kahden satunnaisen ehdokkaan etäisyyden ottaen huomioon vastausten poikkeavuuden massasta.
-    """
-
-    # Asteikko jota kysymykset käyttävät.
-    ASTEIKON_SKAALA = 5
 
     # Luetaan vaalidata
     vaalidata = lue_data_sisään(tiedosto)
 
     # Valitse satunnaiset ehdokkaat, ja skaalakysymykset.
-    vertailtavat = vaalidata.sample(2).fillna(3)
+    vertailtavat = vaalidata.sample(määrä + 1).fillna(3)
     vastaukset = vaalidata.iloc[:, 4:33].fillna(3).astype('int')
 
-    print(vertailtavat.iloc[0]["puolue"], vertailtavat.iloc[0]["vaalipiiri"])
-    print(vertailtavat.iloc[1]["puolue"], vertailtavat.iloc[1]["vaalipiiri"])
+    # Valitse yksi ehdokkaista, ja poista se vertailtavista.
+    lähde = vertailtavat.sample(1)
+    vertailtavat.drop(index=lähde.iloc[0, 0], inplace=True)
+
+    print(lähde["puolue"].iloc[0], "/", lähde["vaalipiiri"].iloc[0])
+
+    etäisyydet = []
+
+    for kohde_idx, kohde in vertailtavat.iterrows():
+        # Obs, vaarallista koodausta alla.
+        etäisyys = globals()[menetelmä](lähde, kohde, vastaukset)
+        etäisyydet.append((etäisyys, " ".join([kohde["puolue"], "/", kohde["vaalipiiri"]])))
+
+    for etäisyys, ehdokas in sorted(etäisyydet, key=lambda x: x[0]):
+        print("\t", ehdokas, etäisyys)
+
+
+def etäisyys_mean(lähde, kohde, vastaukset):
+    """
+    Laskee etäisyyden vertailemalla vastausten etäisyyksien keskiarvoa.
+    """
+
+    # `diff()` laskee rivin eron edelliseen -> tulos jotain väliltä (1-5) – (5-1)
+    # `tail(1)` ottaa n riviä lopusta - eli viimeisen
+    # `applymap(np.abs)` muuttaa kaikki arvot positiivisiksi luvuiksi.
+
+    erot = lähde.append(kohde)[vastaukset.columns].astype("int").diff().tail(1).applymap(np.abs)
+    return np.float(erot.mean(axis=1))
+
+
+def etäisyys_poikkeavuudella(lähde: pd.DataFrame, kohde: pd.DataFrame, vastaukset: pd.DataFrame) -> np.float:
+
+    # Asteikko jota kysymykset käyttävät.
+    ASTEIKON_SKAALA = 5
 
     keskiarvot = pd.Series()
 
     for sarake in vastaukset:
         # Käy vastaukset läpi yksitellen.
 
+        # Osoitin sarakkeeseen - kysymykseen - jota käsitellään
         col = vastaukset[sarake]
 
         # Kerää ehdokkaiden vastaukset. `set()` pitää huolta ettei sama vastaus toistu useampaan kertaan.
         vertailtavien_vastaukset = set([
-            np.int(vertailtavat.iloc[0][sarake]),
-            np.int(vertailtavat.iloc[1][sarake])
+            np.int(lähde[sarake]),
+            np.int(kohde[sarake])
         ])
 
         # Laske keskiarvo kuinka monta on vastannut samoin, ja kuinka monta erillailla.
@@ -98,20 +87,14 @@ def etäisyys_poikkeavuudella(tiedosto):
         # Varmista arvo järkevälle skaalalle.
         painotin = min(2.0, max(0.1, muutoin_vastanneita / samoin_vastanneita))
 
-        # Laske etäisyys kuten :func:`laske_ero_mean`. Pieni ero koska kyseessä on `Series` eikä `Dataframe`.
-        etäisyys = abs(vertailtavat[sarake].astype('int').diff().iat[1]) * painotin
-
-        # Tulostele debuggausta varten tietoa
-        print(sarake, vertailtavien_vastaukset)
-        print("\tSamoin:", samoin_vastanneita, "Muutoin:", muutoin_vastanneita, "Painotin", painotin)
-        print("\tEtäisyys", etäisyys)
+        # Laske etäisyys, ja varmista se olevan positiivinen luku alkeisluvulla.
+        etäisyys = abs(np.int(lähde[sarake]) - np.int(kohde[sarake])) * painotin
 
         keskiarvot = keskiarvot.append(pd.Series([etäisyys]), ignore_index=True)
 
-    etäisyys_mean = keskiarvot.mean()
-    print("Etäisyys mean", etäisyys_mean)
+    etäisyys_mean = np.float(keskiarvot.mean())
     return etäisyys_mean
 
 
 if __name__ == "__main__":
-    etäisyys_poikkeavuudella()
+    etäisyyksiä()
