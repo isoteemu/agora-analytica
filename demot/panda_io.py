@@ -57,7 +57,7 @@ def lataa_ylen_data(url=VAALIDATA_AINEISTO, tiedosto=VAALIDATA_TIEDOSTO) -> pd.D
 
 def lue_data_sisään(tiedosto) -> pd.DataFrame:
     """ Lukee datan sisään """
-    data = pd.read_csv(tiedosto, index_col=INDEX)
+    data = pd.read_csv(tiedosto)
 
     return data.replace("-", np.NaN)
 
