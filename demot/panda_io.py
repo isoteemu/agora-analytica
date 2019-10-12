@@ -24,6 +24,8 @@ VAALIDATA_TIEDOSTO = "Avoin_data_eduskuntavaalit_2019_valintatiedot.csv"
 ETUNIMET = "etunimitilasto-2019-08-07-vrk.xlsx"
 SUKUNIMET = "sukunimitilasto-2019-08-07-vrk.xlsx"
 
+INDEX = "ehdokasnumero"
+
 def lataa_ylen_data(url=VAALIDATA_AINEISTO, tiedosto=VAALIDATA_TIEDOSTO) -> pd.DataFrame:
     """
     Lukee datan ylen sivuilta.
@@ -49,12 +51,13 @@ def lataa_ylen_data(url=VAALIDATA_AINEISTO, tiedosto=VAALIDATA_TIEDOSTO) -> pd.D
         # Puretaan haluttu tiedosto, ja kääritään pandan dataframen ympärille.
         data = pd.read_csv(BytesIO(pakattu_tiedosto.read(tiedosto)))
 
+
     return data
 
 
 def lue_data_sisään(tiedosto) -> pd.DataFrame:
     """ Lukee datan sisään """
-    data = pd.read_csv(tiedosto)
+    data = pd.read_csv(tiedosto, index_col=INDEX)
 
     return data.replace("-", np.NaN)
 
@@ -117,7 +120,7 @@ def tallenna_tiedosto(kohde):
     """
 
     data = lataa_ylen_data()
-    data.to_csv(kohde)
+    data.to_csv(kohde, index_label=INDEX)
     click.echo(f"Tiedosto tallennettu: {kohde!r}")
 
 
@@ -148,7 +151,7 @@ def lisää_nimet(tiedosto, etunimet, sukunimet):
     data = lue_data_sisään(tiedosto)
     if "nimi" not in data.columns:
         nimet = pd.Series(generoi_nimi(data.shape[0], etunimet, sukunimet), name="nimi")
-        data.assign(nimi=nimet).to_csv(tiedosto)
+        data.assign(nimi=nimet).to_csv(tiedosto, index_label=INDEX)
 
     else:
         click.abort("Nimi sarake on jo olemassa.")
