@@ -33,7 +33,7 @@ def etäisyyksiä(tiedosto, määrä: int, menetelmä):
     lähde = vertailtavat.sample(1)
     vertailtavat.drop(index=lähde.iloc[0, 0], inplace=True)
 
-    print(lähde["puolue"].iloc[0], "/", lähde["vaalipiiri"].iloc[0])
+    click.echo(f"#{lähde['ehdokasnumero'].iloc[0]} {lähde['puolue'].iloc[0]} / {lähde['vaalipiiri'].iloc[0]}")
 
     etäisyydet = []
 
@@ -43,7 +43,7 @@ def etäisyyksiä(tiedosto, määrä: int, menetelmä):
         etäisyydet.append((etäisyys, " ".join([kohde["puolue"], "/", kohde["vaalipiiri"]])))
 
     for etäisyys, ehdokas in sorted(etäisyydet, key=lambda x: x[0]):
-        print("\t", ehdokas, etäisyys)
+        click.echo(f"\t{etäisyys}\t{ehdokas}")
 
 
 def etäisyys_mean(lähde, kohde, vastaukset):
@@ -79,7 +79,7 @@ def etäisyys_poikkeavuudella(lähde: pd.DataFrame, kohde: pd.DataFrame, vastauk
         ])
 
         # Laske keskiarvo kuinka monta on vastannut samoin, ja kuinka monta erillailla.
-        # `isin()` luo listan True/False arvoilla, ja saadulla listalla suodatetaan vain True arvot. laskentaan.
+        # `isin()` luo listan True/False arvoilla, ja saadulla listalla suodatetaan vain True arvot laskentaan.
         # Tilde taas vaihtaa arvot toisinpäin.
         samoin_vastanneita = col[col.isin(vertailtavien_vastaukset)].count() / len(vertailtavien_vastaukset)
         muutoin_vastanneita = col[~col.isin(vertailtavien_vastaukset)].count() / (ASTEIKON_SKAALA - len(vertailtavien_vastaukset))
