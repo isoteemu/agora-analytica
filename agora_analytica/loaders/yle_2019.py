@@ -91,12 +91,13 @@ def process_data(df: pd.DataFrame):
     """
 
     df.columns = df.columns.map(clean_column)
-
     df = convert_linear_into_int(df)
+
     return df
 
 
 def clean_column(x):
+    """ Clean string. """
     # Remove line endings.
     x = x.replace("\n", "")
     # Strip extra spaces and commas
@@ -113,8 +114,7 @@ def clean_string(x):
 
 
 def convert_linear_into_int(df: pd.DataFrame) -> pd.DataFrame:
-    """ Converts linear values into :type:`np.int`
-    """
+    """ Converts linear values into :type:`np.int` """
     linear_ranges = [
         ("Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.", "On oikein nähdä vaivaa sen eteen, ettei vahingossakaan loukkaa toista."),
         ("Uusimaa. Kaatolupia on myönnettävä nykyistä enemmän susikannan rajoittamiseksi.", "Uusimaa. Metro tulee jatkaa Helsingistä Sipooseen.", ("vaalipiiri", "Uudenmaan vaalipiiri")),
