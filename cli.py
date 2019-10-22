@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 
+import logging
 
 from agora_analytica.loaders.yle_2019 import download_dataset
 
 import click
 
-
 @click.group()
-def cli():
-    pass
+@click.option("--debug/--no-debug", default=True, help="Show debug output")
+def cli(debug):
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
+
 
 @cli.command()
 @click.option("--target", type=click.Path())
