@@ -35,7 +35,7 @@ def download(target=None):
 
 @cli.command()
 @click.option("--target", type=click.Path(), default=_instance_path("build.html"))
-@click.option("--limit", default=150)
+@click.option("--limit", default=50)
 def build(target, limit):
     """
     Build page.
@@ -47,10 +47,16 @@ def build(target, limit):
         loader=PackageLoader('agora_analytica', 'templates')
     )
 
-    df = dataset.load_dataset()
+    click.echo("Loading dataset ... ", nl=False)
+    df = dataset.load_dataset() 
+    click.echo("[DONE]")
 
+    click.echo("Calculating distances ... ", nl=False)
     answers = dataset.linear_answers(df)
     distances = measure_distances(answers, limit, method="linear")
+    click.echo("[DONE]")
+
+    click.echo("Generating page ... ", nl=False)
 
     data = [{
         "source": "%s (%s)" % (df.at[int(i),"nimi"], df.at[int(i),"puolue"]),
@@ -62,6 +68,7 @@ def build(target, limit):
     template = env.get_template("main.html")
     with open(target, "w") as f:
         f.write(template.render(data=data))
+    click.echo("[DONE]")
 
     webbrowser.open(f"file:///{target}")
 
