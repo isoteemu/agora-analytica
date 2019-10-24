@@ -3,3 +3,4 @@ click==7.0
 numpy==1.17.3
 pandas==0.25.1
 xlrd==1.2.0
+cachetools==3.1.1

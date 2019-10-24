@@ -10,7 +10,12 @@ import numpy as np
 import string
 
 # Get relative dir
-_instance_path = lambda f: abspath(join(getcwd(), "instance", f))
+def _instance_path(f=None):
+    path = [getcwd(), "instance"]
+    if f is not None:
+        path.append(f)
+
+    return abspath(join(*path))
 
 """
 Name files.
