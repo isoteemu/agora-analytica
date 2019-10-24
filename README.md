@@ -7,7 +7,7 @@ $ python3 -m virtualenv .venv
 # On windows
 $ .venv\Scripts\activate.bat
 # On Bash
-$ source .venv/Scripts/activate
+$ source .venv/bin/activate
 ```
 
 Install dependencies:
