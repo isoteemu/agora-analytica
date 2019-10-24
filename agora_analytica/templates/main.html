@@ -1,0 +1,183 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Ham by Spam</title>
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <link rel="stylesheet" href="">
+
+  <style>
+  /* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+  </style>
+
+</head>
+
+<body>
+
+  <div id="graph" style="width:100vw; height:100vh;">
+
+  </div>
+
+{#
+<script src="https://d3js.org/d3-dispatch.v1.min.js"></script>
+<script src="https://d3js.org/d3-quadtree.v1.min.js"></script>
+<script src="https://d3js.org/d3-timer.v1.min.js"></script>
+<script src="https://d3js.org/d3-force.v2.min.js"></script>
+#}
+
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var data = {{ data|tojson|safe }};
+var w = parseInt(d3.select("#graph").style("width")),
+    h = parseInt(d3.select("#graph").style("height"));
+
+var circleWidth = 5;
+
+var nodes = Array.from(new Set(data.map(d => d["source"] ).concat(data.map(d => d["target"] )))).map(d => { return {"id": d}});
+var links = [];
+
+var links_map = {};
+
+data.forEach(element => {
+
+    let [src, trg] = [
+        nodes.findIndex(d => d.id == element.source ),
+        nodes.findIndex(d => d.id == element.target )
+    ].sort();
+
+    if(!(src in links_map)) links_map[src] = []
+    if(!(trg in links_map)) links_map[trg] = []
+
+    let link = {
+        source: src,
+        distance: element.distance,
+        target: trg
+    }
+
+    links_map[src].push(link);
+    links_map[trg].push(link);
+});
+
+for(let e in links_map) {
+    var closest = links_map[e].sort(function(a, b) {return b.distance - a.distance}).slice(0, 3);
+    closest.map(d => links.push({source: nodes[d.source], target:nodes[d.target]}));
+}
+
+var fontFamily = 'Bree Serif',
+    fontSizeHighlight = '1.5em',
+    fontSizeNormal = '1em';
+
+var vis = d3.select("#graph")
+    .append("svg:svg")
+    .attr("class", "stage")
+    .attr("width", w)
+    .attr("height", h);
+
+var force = d3.layout.force()
+    .nodes(nodes)
+    .links([])
+    .gravity(0.1)
+    .charge(-1000)
+    .size([w, h]);
+
+var link = vis.selectAll(".link")
+    .data(links)
+    .enter().append("line")
+    .attr("class", "link")
+    .attr("stroke", "#CCC")
+    .attr("fill", "none");
+
+var node = vis.selectAll("circle.node")
+    .data(nodes)
+    .enter().append("g")
+    .attr("class", "node");
+
+
+//CIRCLE
+node.append("svg:circle")
+    .attr("cx", function (d) { return d.x; })
+    .attr("cy", function (d) { return d.y; })
+    .attr("r", circleWidth)
+    .attr("fill", function (d, i) { if (i > 0) { return "#0A2933"; } else { return "#042029" } })
+
+//TEXT
+node.append("text")
+    .text(function (d, i) { return d.id; })
+    .attr("x", function (d, i) { return circleWidth + 5; })
+    .attr("y", function (d, i) { if (i > 0) { return circleWidth + 0 } else { return 8 } })
+    .attr("font-family", "Bree Serif")
+    .attr("fill", function (d, i) { return "#333"; })
+    .attr("font-size", function (d, i) { return "1em"; })
+    .attr("text-anchor", function (d, i) { if (i > 0) { return "beginning"; } else { return "end" } })
+
+
+
+force.on("tick", function (e) {
+    node.attr("transform", function (d, i) {
+        return "translate(" + d.x + "," + d.y + ")";
+    });
+
+    link.attr("x1", function (d) { return d.source.x; })
+        .attr("y1", function (d) { return d.source.y; })
+        .attr("x2", function (d) { return d.target.x; })
+        .attr("y2", function (d) { return d.target.y; })
+});
+
+force.start();
+
+</script>
+
+</body>
+</html>
