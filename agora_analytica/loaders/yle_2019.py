@@ -24,7 +24,7 @@ import re
 
 from .utils import _instance_path, generate_names
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 DATASET_URL = "https://vaalit.beta.yle.fi/avoindata/avoin_data_eduskuntavaalit_2019.zip"
 DATASET_NAME = "Avoin_data_eduskuntavaalit_2019_valintatiedot.csv"
@@ -92,7 +92,7 @@ def download_dataset(filepath=DATASET_PATH, url=DATASET_URL, **kwargs) -> pd.Dat
             data = data.assign(nimi=nimet)
 
         data.to_csv(filepath, index_label=INDEX)
-        log.debug("File downloaded as:", filepath)
+        logger.debug("File downloaded as:", filepath)
 
     return data
 
