@@ -1,7 +1,11 @@
 import logging
+from typing import List, Tuple
 
 import pandas as pd
 import numpy as np
+
+from cachetools import cached
+from cachetools.keys import hashkey
 
 logger = logging.getLogger(__name__)
 
@@ -27,22 +31,19 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
     for col in columns:
 
         # Collect answers into unique set.
-        answers_set = set([
+        answers_set = tuple(set([
             np.int(source[col]),
             np.int(target[col])
-        ])
-
-        # Create boolean list of people who answered similarry to current `answers_set`
-        similar_filter = answers[col].isin(answers_set)
+        ]))
 
         # Calculate similar and different answers
-        similar_count = answers[col][similar_filter].count() / len(answers_set)
-        different_count = answers[col][~similar_filter].count() / (answer_scale - len(answers_set))
+        similar_count, different_count = _similar_counts(col, answers, answers_set)
 
-        #logger.debug("Similar %s Different %s", similar_count, different_count)
+        similar_ratio = similar_count / len(answers_set)
+        different_ratio = different_count / (answer_scale - len(answers_set))
 
         # Calculate bias
-        bias = np.float(min(bias_max, max(bias_min, different_count / similar_count)))
+        bias = np.float(min(bias_max, max(bias_min, different_ratio / similar_ratio)))
 
         # Calculate distance between answers with bias.
         distance = np.abs(np.int(source[col]) - np.int(target[col])) * bias
@@ -51,3 +52,22 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
 
     distance_mean = distances.mean()
     return distance_mean
+
+@cached(cache={}, key=lambda column, answers, answer_set: hashkey(column, answer_set))
+def _similar_counts(column: str, answers: pd.DataFrame, answers_set: Tuple[int]) -> Tuple[np.int, np.int]:
+    """
+    Similar and different answers.
+
+    :return: Tuple of different and similar answers
+    """
+
+    # Create boolean list of people who answered similarry to current `answers_set`
+    similar_filter = answers[column].isin(answers_set)
+
+    # Calculate similar and different answers
+    similar_count = answers[column].dropna()[similar_filter].count()
+    different_count = answers[column].dropna()[~similar_filter].count()
+    logger.debug("'%s': Similar/Different: %i / %i", column, similar_count, different_count)
+
+    return (similar_count, different_count)
+
