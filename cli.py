@@ -17,10 +17,9 @@ from jinja2 import (
 )
 
 @click.group()
-@click.option("--debug/--no-debug", default=True, help="Show debug output")
+@click.option("--debug/--no-debug", default=False, help="Show debug output")
 def cli(debug):
-    if debug:
-        logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=(logging.DEBUG if debug else logging.INFO))
 
 
 @cli.command()
