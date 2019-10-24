@@ -35,7 +35,8 @@ DATASET_PATH = _instance_path(DATASET_NAME)
 # column to use for dataframe index.
 INDEX = "key"
 
-
+# Columns in linear scale. Constructed as triples or tuples:
+# `start`, `stop`, `filtering rule`
 linear_space = [
     ("Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.", "On oikein nähdä vaivaa sen eteen, ettei vahingossakaan loukkaa toista."),
     ("Uusimaa. Kaatolupia on myönnettävä nykyistä enemmän susikannan rajoittamiseksi.", "Uusimaa. Metro tulee jatkaa Helsingistä Sipooseen.", ("vaalipiiri", "Uudenmaan vaalipiiri")),
