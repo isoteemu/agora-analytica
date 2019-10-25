@@ -4,14 +4,14 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build page",
+            "label": "Build dataset",
             "type": "shell",
             "command": "${config:python.pythonPath}",
             "args": [
                 "cli.py",
                 "build",
                 "--target",
-                "${workspaceFolder}/instance/build.html"
+                "${workspaceFolder}/instance/"
             ],
             "group": {
                 "kind": "build",

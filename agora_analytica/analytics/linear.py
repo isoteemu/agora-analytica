@@ -19,7 +19,7 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
     :param scale: (optional) Scale on which questions are asked, starting from 1. Defaults to 5.
     :param bias_min: (optional) float Minimum allowed bias.
     :param bias_max: (optional) float Maximum allowed bias
-     """
+    """
 
     # Stores distances, and is used to calculate mean value.
     distances = pd.Series()
@@ -61,7 +61,7 @@ def _similar_counts(column: str, answers: pd.DataFrame, answers_set: Tuple[int])
     :return: Tuple of different and similar answers
     """
 
-    # Create boolean list of people who answered similarry to current `answers_set`
+    # Create boolean list of people who answered similarly to current `answers_set`
     similar_filter = answers[column].isin(answers_set)
 
     # Calculate similar and different answers

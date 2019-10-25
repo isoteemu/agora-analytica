@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 import importlib
 
-def measure_distances(df: pd.DataFrame, limit=-1, method="linear", **kwargs) -> pd.DataFrame:
+def measure_distances(df: pd.DataFrame, method="linear", **kwargs) -> pd.DataFrame:
     """
     Measure distance between candidates. 
 
@@ -27,10 +27,6 @@ def measure_distances(df: pd.DataFrame, limit=-1, method="linear", **kwargs) -> 
 
     calc = importlib.import_module(f".{method}", __package__)
 
-    candidates = df
-    if limit > 0:
-        candidates = df.head(limit)
-
     # Define return structure.
     distances = pd.DataFrame({
         "source": pd.Series(dtype='int64'),
@@ -39,11 +35,11 @@ def measure_distances(df: pd.DataFrame, limit=-1, method="linear", **kwargs) -> 
         })
 
     # O(N*N) processing for calculating distances.
-    for i in range(candidates.shape[0]):
+    for i in range(df.shape[0]):
         # Offset is passed so already processed entries aren't 
         # processed multiple times.
         offset = i + 1
-        for l in range(offset, candidates.shape[0]):
+        for l in range(offset, df.shape[0]):
             source = df.loc[i]
             target = df.loc[l]
 
