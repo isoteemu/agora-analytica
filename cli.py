@@ -13,11 +13,14 @@ import click
 
 from flask.json import dumps as jsonify
 
+debug = False
 
 @click.group()
-@click.option("--debug/--no-debug", default=False, help="Show debug output")
+@click.option("--debug/--no-debug", default=debug, help="Show debug output")
 def cli(debug):
+    globals()['debug'] = debug
     logging.basicConfig(level=(logging.DEBUG if debug else logging.INFO))
+
 
 
 @cli.command()
@@ -47,8 +50,7 @@ def build(target, limit, method):
         """ Helper to write data into json file """
 
         with open(os.path.join(target, f"{file}.json"),'w') as f:
-            print("\n", file, data)
-            f.write(jsonify(data))
+            f.write(jsonify(data, indent=(4 if debug else 0)))
         
 
     click.echo("Loading dataset ... ", nl=False)
@@ -79,7 +81,6 @@ def build(target, limit, method):
         } for i, d, l in distances.values]
 
     _write("nodes", data_nodes)
-
     _write("links", data_links)
 
     click.echo("[DONE]")
