@@ -10,16 +10,17 @@ from agora_analytica.loaders.utils import _instance_path
 from agora_analytica.analytics import measure_distances
 
 import click
-from jinja2 import (
-    Environment,
-    PackageLoader,
-    select_autoescape
-)
+
+from flask.json import dumps as jsonify
+
+debug = False
 
 @click.group()
-@click.option("--debug/--no-debug", default=False, help="Show debug output")
+@click.option("--debug/--no-debug", default=debug, help="Show debug output")
 def cli(debug):
+    globals()['debug'] = debug
     logging.basicConfig(level=(logging.DEBUG if debug else logging.INFO))
+
 
 
 @cli.command()
@@ -34,43 +35,58 @@ def download(target=None):
 
 
 @cli.command()
-@click.option("--target", type=click.Path(), default=_instance_path("build.html"))
+@click.option("--target", type=click.Path(file_okay=False), default=_instance_path(), show_default=True)
+@click.option("--method", type=click.Choice(['linear', 'dummy']), help="Distance approximation method.", default="linear")
 @click.option("--limit", default=50)
-def build(target, limit):
+def build(target, limit, method):
     """
     Build page.
 
     :param target: Target file
     :param limit: Limit processing into N candidates.
     """
-    env = Environment(
-        loader=PackageLoader('agora_analytica', 'templates')
-    )
+
+    def _write(file, data):
+        """ Helper to write data into json file """
+
+        with open(os.path.join(target, f"{file}.json"),'w') as f:
+            f.write(jsonify(data, indent=(4 if debug else 0)))
+        
 
     click.echo("Loading dataset ... ", nl=False)
-    df = dataset.load_dataset() 
+    df = dataset.load_dataset()
+    if limit < 2:
+        raise click.BadParameter("Build should include more than 2 candidates.", param_hint="--limit")
+    df = df.head(limit)
     click.echo("[DONE]")
 
     click.echo("Calculating distances ... ", nl=False)
     answers = dataset.linear_answers(df)
-    distances = measure_distances(answers, limit, method="linear")
+    distances = measure_distances(answers, method=method)
     click.echo("[DONE]")
 
-    click.echo("Generating page ... ", nl=False)
+    click.echo("Writing data ... ", nl=False)
 
-    data = [{
-        "source": "%s (%s)" % (df.at[int(i),"nimi"], df.at[int(i),"puolue"]),
-        "distance": d,
-        "target": "%s (%s)" % (df.at[int(l),"nimi"], df.at[int(l),"puolue"])
+    data_nodes = [{
+        "index": idx,
+        "name": row["nimi"],
+        "party": row["puolue"],
+        "constituencies": row["vaalipiiri"]
+    } for idx, row in df.iterrows()]
+
+    data_links = [{
+        "source": int(i),
+        "distance": float(d),
+        "target": int(l)
         } for i, d, l in distances.values]
-    #data = [{i, d, l] for i, d, l in distances.values]
 
-    template = env.get_template("main.html")
-    with open(target, "w") as f:
-        f.write(template.render(data=data))
+    _write("nodes", data_nodes)
+    _write("links", data_links)
+
     click.echo("[DONE]")
 
-    webbrowser.open(f"file:///{target}")
+
+
 
 
 if __name__ == "__main__":

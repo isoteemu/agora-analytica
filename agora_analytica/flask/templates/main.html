@@ -1,0 +1,151 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Ham by Spam</title>
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <link rel="stylesheet" href="">
+
+  {#
+    Reset CSS on vain poistamassa padding, margin, ja muut legacy asiat.
+    Jos käytetään jotain websivun frameworkkia, voidaan se poistaa ongelmitta.
+  #}
+  <link rel="stylesheet" href="{{url_for('static', filename='reset.css')}}">
+
+</head>
+
+<body>
+
+  <div id="graph" style="width:100vw; height:100vh;">
+
+  </div>
+
+
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var nodes = [],
+    links = [];
+
+d3.json('{{url_for(".data_nodes")}}', function(data) {
+    nodes = data;
+    run();
+});
+d3.json('{{url_for(".data_links")}}', function(data) {
+
+    var links_map = {};
+    
+    // Collect node links, from closest to furthest.
+    data.sort((a, b) => a["distance"] - b["distance"] ).forEach((element) => {
+
+
+        // Pointers to node indexes.
+        source = element["source"];
+        target = element["target"];
+
+        if(!(source in links_map)) links_map[source] = [];
+        if(!(target in links_map)) links_map[target] = [];
+
+        // Pointers
+        let src_links = links_map[source];
+        let trg_links = links_map[target];
+
+        if( src_links.length < 3) src_links.push(target);
+        if( trg_links.length < 3) trg_links.push(source);
+    });
+
+    for(let source in links_map) {
+        for(let target of links_map[source]) {
+            let [src, trg] = [parseInt(source), parseInt(target)].sort();
+            links.push({source: src, target:trg});
+        }
+    }
+
+    run();
+});
+
+function run() {
+    {# HÄX - älä suorita ellei dataa ole ladattu. #}
+    if(nodes.length == 0 || links.length == 0) return;
+
+    let w = parseInt(d3.select("#graph").style("width")),
+        h = parseInt(d3.select("#graph").style("height"));
+
+    // Link into nodes.
+    links = links.map(function (l) {
+        return { source: nodes[l.source], target: nodes[l.target]}
+    });
+
+    var circleWidth = 5;
+
+    var fontFamily = 'Bree Serif',
+        fontSizeHighlight = '1.5em',
+        fontSizeNormal = '1em';
+
+    var vis = d3.select("#graph")
+        .append("svg:svg")
+        .attr("class", "stage")
+        .attr("width", w)
+        .attr("height", h);
+
+    var force = d3.layout.force()
+        .nodes(nodes)
+        .links([])
+        .gravity(0.1)
+        .charge(-1000)
+        .size([w, h]);
+
+    var link = vis.selectAll(".link")
+        .data(links)
+        .enter().append("line")
+        .attr("class", "link")
+        .attr("stroke", "#CCC")
+        .attr("fill", "none");
+
+    var node = vis.selectAll("circle.node")
+        .data(nodes)
+        .enter().append("g")
+        .attr("class", "node");
+
+
+    //CIRCLE
+    node.append("svg:circle")
+        .attr("cx", function (d) { return d.x; })
+        .attr("cy", function (d) { return d.y; })
+        .attr("r", circleWidth)
+        .attr("fill", function (d, i) { if (i > 0) { return "#0A2933"; } else { return "#042029" } })
+
+    //TEXT
+    node.append("text")
+        .text(function (d, i) { return d.name + " ("+d.party+")"; })
+        .attr("x", function (d, i) { return circleWidth + 5; })
+        .attr("y", function (d, i) { if (i > 0) { return circleWidth + 0 } else { return 8 } })
+        .attr("font-family", "Bree Serif")
+        .attr("fill", function (d, i) { return "#333"; })
+        .attr("font-size", function (d, i) { return "1em"; })
+        .attr("text-anchor", function (d, i) { if (i > 0) { return "beginning"; } else { return "end" } })
+
+
+
+    force.on("tick", function (e) {
+        node.attr("transform", function (d, i) {
+            return "translate(" + d.x + "," + d.y + ")";
+        });
+
+        link.attr("x1", function (d) { return d.source.x; })
+            .attr("y1", function (d) { return d.source.y; })
+            .attr("x2", function (d) { return d.target.x; })
+            .attr("y2", function (d) { return d.target.y; })
+    });
+
+    force.start();
+}
+
+</script>
+
+</body>
+</html>
