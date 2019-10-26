@@ -33,8 +33,12 @@ def download(target=None):
 
 
 @cli.command()
-@click.option("--target", type=click.Path(file_okay=False), default=_instance_path(), show_default=True)
-@click.option("--method", type=click.Choice(['linear', 'dummy']), help="Distance approximation method.", default="linear")
+@click.option("--target", type=click.Path(file_okay=False),
+                          default=_instance_path(),
+                          show_default=True)
+@click.option("--method", type=click.Choice(['linear', 'dummy']),
+                          help="Distance approximation method.",
+                          default="linear")
 @click.option("--limit", default=50)
 def build(target, limit, method):
     """
