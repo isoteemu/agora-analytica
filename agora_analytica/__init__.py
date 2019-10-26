@@ -1,11 +1,12 @@
 from os import getcwd
-from os.path import abspath, join
+
+from pathlib import Path
 
 
-def instance_path() -> str:
+def instance_path() -> Path:
     """
         Return instance path.
     """
-    path = [getcwd(), "instance"]
+    path = Path.cwd() / "instance"
 
-    return abspath(join(*path))
+    return path
