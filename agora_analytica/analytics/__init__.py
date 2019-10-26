@@ -11,9 +11,12 @@ import pandas as pd
 import numpy as np
 import importlib
 
+
 def measure_distances(df: pd.DataFrame, method="linear", **kwargs) -> pd.DataFrame:
     """
-    Measure distance between candidates. 
+    Measure distance between candidates.
+
+    Asymptotic behaviour is `O((N - 1) * N/2 - 1)`.
 
     :param df: :class:`pandas.DataFrame` which is processed by row basis.
                Asymptotic behavior is exponential.
@@ -32,11 +35,11 @@ def measure_distances(df: pd.DataFrame, method="linear", **kwargs) -> pd.DataFra
         "source": pd.Series(dtype='int64'),
         "distance": pd.Series(dtype='float'),
         "target": pd.Series(dtype='int64')
-        })
+    })
 
     # O(N*N) processing for calculating distances.
     for i in range(df.shape[0]):
-        # Offset is passed so already processed entries aren't 
+        # Offset is passed so already processed entries aren't
         # processed multiple times.
         offset = i + 1
         for l in range(offset, df.shape[0]):
@@ -47,4 +50,3 @@ def measure_distances(df: pd.DataFrame, method="linear", **kwargs) -> pd.DataFra
             distances = distances.append(pd.Series([np.int(i), distance, np.int(l)], index=distances.columns, dtype='object'), ignore_index=True)
 
     return distances
-

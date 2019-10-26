@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+from typing import Tuple
 
 import pandas as pd
 import numpy as np
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
-        answer_scale=5, bias_min=0.2, bias_max=2.0) -> np.float:
+             answer_scale=5, bias_min=0.2, bias_max=2.0) -> np.float:
     """ Calculate distance between targets.
 
     Uses less common answers to skew bias.
@@ -53,6 +53,7 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
     distance_mean = distances.mean()
     return distance_mean
 
+
 @cached(cache={}, key=lambda column, answers, answer_set: hashkey(column, answer_set))
 def _similar_counts(column: str, answers: pd.DataFrame, answers_set: Tuple[int]) -> Tuple[np.int, np.int]:
     """
@@ -70,4 +71,3 @@ def _similar_counts(column: str, answers: pd.DataFrame, answers_set: Tuple[int])
     logger.debug("'%s': Similar/Different: %i / %i", column, similar_count, different_count)
 
     return (similar_count, different_count)
-
