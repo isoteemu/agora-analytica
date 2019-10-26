@@ -100,7 +100,7 @@ def load_dataset(filename: str = DATASET_PATH) -> pd.DataFrame:
     """ Read dataset """
 
     # Warn if dataset has been previously opened
-    key = __name__ + '.' + filename
+    key = f"{__name__}.{filename}"
     dataset_loaded = globals().setdefault(key, False)
 
     if dataset_loaded:
