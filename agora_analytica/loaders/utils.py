@@ -9,9 +9,14 @@ import numpy as np
 
 import string
 
-# Get relative dir
+from .. import instance_path
+
+
 def _instance_path(f=None):
-    path = [getcwd(), "instance"]
+    """
+    Path for file.
+    """
+    path = [instance_path]
     if f is not None:
         path.append(f)
 

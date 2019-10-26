@@ -4,6 +4,9 @@ from flask.logging import default_handler
 import os
 import logging
 
+from .. import instance_path
+
+
 def setup_app(name=__name__, **kwargs) -> Flask:
     r"""
     Setup Flask environment
@@ -45,14 +48,15 @@ def setup_app(name=__name__, **kwargs) -> Flask:
     #Babel(app)
     #app.jinja_env.globals.update(get_locale=get_locale)
 
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger(name)
     logger.addHandler(default_handler)
 
     return app
 
+
 if __name__ == "agora_analytica.flask":
 
-    app = setup_app(__name__)
+    app = setup_app(__name__, instance_path=instance_path())
 
     from . import views
     views.app_init(app)
