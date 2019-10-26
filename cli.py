@@ -49,9 +49,8 @@ def build(target, limit, method):
     def _write(file, data):
         """ Helper to write data into json file """
 
-        with open(os.path.join(target, f"{file}.json"),'w') as f:
+        with open(os.path.join(target, f"{file}.json"), 'w') as f:
             f.write(jsonify(data, indent=(4 if debug else 0)))
-        
 
     click.echo("Loading dataset ... ", nl=False)
     df = dataset.load_dataset()
@@ -62,7 +61,10 @@ def build(target, limit, method):
 
     click.echo("Calculating distances ... ", nl=False)
     answers = dataset.linear_answers(df)
-    distances = measure_distances(answers, method=method)
+
+    import asyncio
+    distances = asyncio.run(measure_distances(answers, method=method))
+
     click.echo("[DONE]")
 
     click.echo("Writing data ... ", nl=False)
