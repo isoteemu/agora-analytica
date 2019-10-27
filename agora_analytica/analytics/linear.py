@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
-             answer_scale=5, bias_min=0.2, bias_max=2.0) -> np.float:
+             answer_scale=5, bias_min=0.2, bias_max=2.0) -> float:
     """ Calculate distance between targets.
 
     Uses less common answers to skew bias.
@@ -21,14 +21,14 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
     :param bias_max: (optional) float Maximum allowed bias
     """
 
-    # Stores distances, and is used to calculate mean value.
-    distances = pd.Series()
-
     # Collect columns that source and target have both answered.
     columns = set(source.dropna().index).intersection(set(target.dropna().index))
 
+    # Stores distances, and is used to calculate mean value.
+    distances = np.zeros(len(columns))
+
     # Go through answers, and calculate answer distances from source to target
-    for col in columns:
+    for i, col in enumerate(columns):
 
         # Collect answers into unique set.
         answers_set = tuple(set([
@@ -47,8 +47,7 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
 
         # Calculate distance between answers with bias.
         distance = np.abs(np.int(source[col]) - np.int(target[col])) * bias
-
-        distances = distances.append(pd.Series([distance]), ignore_index=True)
+        distances[i] = distance
 
     distance_mean = distances.mean()
     return distance_mean
