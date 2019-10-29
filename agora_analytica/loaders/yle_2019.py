@@ -54,7 +54,6 @@ linear_space = [
     ("Lappi. Lappiin ei saa avata yhtään uutta kaivosta ennen kuin yhtiöiltä aletaan periä kaivosveroa.", "Lappi. Jäämeren rata pitää rakentaa.", ("vaalipiiri", "Lapin vaalipiiri")),
 ]
 
-
 def download_dataset(filepath=DATASET_PATH, url=DATASET_URL, **kwargs) -> pd.DataFrame:
     """
     Download dataset
@@ -97,9 +96,19 @@ def download_dataset(filepath=DATASET_PATH, url=DATASET_URL, **kwargs) -> pd.Dat
     return data
 
 
-def load_dataset(tiedosto=DATASET_PATH) -> pd.DataFrame:
+def load_dataset(filename: str = DATASET_PATH) -> pd.DataFrame:
     """ Read dataset """
-    df = pd.read_csv(tiedosto)
+
+    # Warn if dataset has been previously opened
+    key = f"{__name__}.{filename}"
+    dataset_loaded = globals().setdefault(key, False)
+
+    if dataset_loaded:
+        logger.warning(f"Dataset {filename!r} opened multiple times.")
+    else:
+        globals()[key] = True
+
+    df = pd.read_csv(filename)
     df = process_data(df)
     return df
 

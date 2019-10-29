@@ -3,8 +3,6 @@
 import logging
 import os.path
 
-import webbrowser
-
 import agora_analytica.loaders.yle_2019 as dataset
 from agora_analytica.loaders.utils import _instance_path
 from agora_analytica.analytics import measure_distances
@@ -15,12 +13,12 @@ from flask.json import dumps as jsonify
 
 debug = False
 
+
 @click.group()
 @click.option("--debug/--no-debug", default=debug, help="Show debug output")
 def cli(debug):
     globals()['debug'] = debug
     logging.basicConfig(level=(logging.DEBUG if debug else logging.INFO))
-
 
 
 @cli.command()
@@ -30,13 +28,17 @@ def download(target=None):
     Download dataset
     """
 
-    data = dataset.download_dataset(target) if target else dataset.download_dataset()
+    dataset.download_dataset(target) if target else dataset.download_dataset()
     click.echo(f"Dataset downloaded")
 
 
 @cli.command()
-@click.option("--target", type=click.Path(file_okay=False), default=_instance_path(), show_default=True)
-@click.option("--method", type=click.Choice(['linear', 'dummy']), help="Distance approximation method.", default="linear")
+@click.option("--target", type=click.Path(file_okay=False),
+                          default=_instance_path(),
+                          show_default=True)
+@click.option("--method", type=click.Choice(['linear', 'dummy']),
+                          help="Distance approximation method.",
+                          default="linear")
 @click.option("--limit", default=50)
 def build(target, limit, method):
     """
@@ -49,9 +51,8 @@ def build(target, limit, method):
     def _write(file, data):
         """ Helper to write data into json file """
 
-        with open(os.path.join(target, f"{file}.json"),'w') as f:
+        with open(os.path.join(target, f"{file}.json"), 'w') as f:
             f.write(jsonify(data, indent=(4 if debug else 0)))
-        
 
     click.echo("Loading dataset ... ", nl=False)
     df = dataset.load_dataset()
@@ -78,15 +79,12 @@ def build(target, limit, method):
         "source": int(i),
         "distance": float(d),
         "target": int(l)
-        } for i, d, l in distances.values]
+    } for i, d, l in distances.values]
 
     _write("nodes", data_nodes)
     _write("links", data_links)
 
     click.echo("[DONE]")
-
-
-
 
 
 if __name__ == "__main__":
