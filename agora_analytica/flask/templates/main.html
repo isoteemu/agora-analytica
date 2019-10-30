@@ -16,21 +16,38 @@
   #}
   <link rel="stylesheet" href="{{url_for('static', filename='reset.css')}}">
 
+    <style>
+    .links line {
+        stroke: #000;
+        stroke-opacity: 0.6;
+    }
+
+    .nodes circle {
+        stroke: #fff;
+        stroke-width: 1.5px;
+    }
+
+    #graph {
+        overflow:hidden;
+    }
+    </style>
+
 </head>
 
 <body>
 
-  <div id="graph" style="width:100vw; height:100vh;">
-
-  </div>
+  <div id="graph"></div>
 
 
-<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://d3js.org/d3.v4.js"></script>
 <script>
 
 var nodes = [],
     links = [],
     parties = [];
+
+var width = parseInt(window.innerWidth),
+    height = parseInt(window.innerHeight);
 
 
 d3.json('{{url_for(".data_parties")}}', function(data) {
@@ -42,19 +59,23 @@ d3.json('{{url_for(".data_nodes")}}', function(data) {
     run();
 });
 d3.json('{{url_for(".data_links")}}', function(data) {
-
     var links_map = {};
     
+    var attrs = {};
+
     // Collect node links, from closest to furthest.
     data.sort((a, b) => a["distance"] - b["distance"] ).forEach((element) => {
-
 
         // Pointers to node indexes.
         source = element["source"];
         target = element["target"];
+        let k = [parseInt(source), parseInt(target)].sort();
 
         if(!(source in links_map)) links_map[source] = [];
         if(!(target in links_map)) links_map[target] = [];
+        if(!(k in attrs)) attrs[k] = {
+            distance: element.distance + 0.1
+        };
 
         // Pointers
         let src_links = links_map[source];
@@ -67,99 +88,116 @@ d3.json('{{url_for(".data_links")}}', function(data) {
     for(let source in links_map) {
         for(let target of links_map[source]) {
             let [src, trg] = [parseInt(source), parseInt(target)].sort();
-            links.push({source: src, target:trg});
+            links.push(Object.assign({
+                source: src,
+                target: trg
+            }, attrs[[src,trg]]));
         }
     }
 
     run();
 });
 
+function node_color(d) {
+    let party = parties.find(function(x) {
+        if(x.itemLabel.includes(d.party)) return true; 
+        if("itemAltLabel" in x) return x.itemAltLabel.includes(d.party)
+    });
+    let color = party && "sRGB_color_hex_triplet" in party ? "#"+party.sRGB_color_hex_triplet : "#CCC"
+
+    return color;
+}
+
 function run() {
     {# HÄX - älä suorita ellei dataa ole ladattu. #}
     if(nodes.length == 0 || links.length == 0 || parties.length == 0) return;
 
-    let w = parseInt(d3.select("#graph").style("width")),
-        h = parseInt(d3.select("#graph").style("height"));
-
     // Link into nodes.
-    links = links.map(function (l) {
-        return { source: nodes[l.source], target: nodes[l.target]}
-    });
 
-    var circleWidth = 5;
+    var svg = d3.select("#graph")
+        .append("svg")
+            .attr("width", width-1)
+            .attr("height", height-1)
+            .call(d3.zoom().on("zoom", function () {
+                svg.attr("transform", d3.event.transform)
+        })).append("g");
 
-    var fontFamily = 'Bree Serif',
-        fontSizeHighlight = '1.5em',
-        fontSizeNormal = '1em';
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink()
+            .id(function(d) { return d.index; })
+            .distance(function(d) {return d.distance * 30;}))
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2));
 
-    var vis = d3.select("#graph")
-        .append("svg:svg")
-        .attr("class", "stage")
-        .attr("width", w)
-        .attr("height", h);
-
-    var force = d3.layout.force()
-        .nodes(nodes)
-        .links([])
-        .gravity(0.3)
-        .charge(-500)
-        .size([w, h]);
-
-    var link = vis.selectAll(".link")
+    var link = svg.append("g")
+        .attr("class", "links")
+        .selectAll("line")
         .data(links)
-        .enter().append("line")
-        .attr("class", "link")
-        .attr("stroke", "#CCC")
-        .attr("fill", "none");
+        .enter()
+        .append("line")
+        .attr("stroke-width", 1);
 
-    var node = vis.selectAll("circle.node")
+    var node = svg.append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
         .data(nodes)
         .enter().append("g")
-        .attr("class", "node")
-        .attr("id", function (d) { return "node-"+d.index; })
+        
+    var circles = node.append("circle")
+        .attr("r", 5)
+        .attr("fill", node_color)
+        // .call(d3.drag()
+        //     .on("start", dragstarted)
+        //     .on("drag", dragged)
+        //     .on("end", dragended));
 
+    var lables = node.append("text")
+        .text(function(d) {
+            return d.name;
+        })
+        .attr('x', 6)
+        .attr('y', 3);
 
-    //CIRCLE
-    node.append("svg:circle")
-        .attr("cx", function (d) { return d.x; })
-        .attr("cy", function (d) { return d.y; })
-        .attr("r", circleWidth)
-        .attr("fill", function (d, i) {
+    node.append("title")
+        .text(function(d) { return d.party; });
 
-            let party = parties.find(function(x) {
-                if(x.itemLabel.includes(d.party)) return true; 
-                if("itemAltLabel" in x) return x.itemAltLabel.includes(d.party)
-                });
-            let color = party && "sRGB_color_hex_triplet" in party ? "#"+party.sRGB_color_hex_triplet : "#CCC"
+    simulation
+        .nodes(nodes)
+        .on("tick", ticked);
 
-            return color;
-        });
+    simulation.force("link")
+        .links(links);
 
-    //TEXT
-    node.append("text")
-        .text(function (d, i) { return "("+d.party+")"; })
-        .attr("x", function (d, i) { return circleWidth + 5; })
-        .attr("y", function (d, i) { if (i > 0) { return circleWidth + 0 } else { return 8 } })
-        .attr("font-family", "Bree Serif")
-        .attr("fill", function (d, i) { return "#333"; })
-        .attr("font-size", function (d, i) { return "0.4em"; })
-        .attr("text-anchor", function (d, i) { if (i > 0) { return "beginning"; } else { return "end" } })
+    function ticked() {
+        link
+            .attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
 
-
-
-    force.on("tick", function (e) {
-        node.attr("transform", function (d, i) {
+        node.attr("transform", function(d) {
             return "translate(" + d.x + "," + d.y + ")";
-        });
+        })
+    }
 
-        link.attr("x1", function (d) { return d.source.x; })
-            .attr("y1", function (d) { return d.source.y; })
-            .attr("x2", function (d) { return d.target.x; })
-            .attr("y2", function (d) { return d.target.y; })
-    });
+    function dragstarted(d) {
+        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
 
-    force.start();
+    function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+    }
+
+    function dragended(d) {
+        if (!d3.event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
 }
+
 
 </script>
 
