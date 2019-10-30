@@ -119,6 +119,10 @@ def process_data(df: pd.DataFrame):
     """
 
     df.columns = df.columns.map(clean_column)
+    df = df.rename(columns={
+        "puolue": "party",
+        "nimi": "name"
+    })
     df = convert_linear_into_int(df)
 
     return df

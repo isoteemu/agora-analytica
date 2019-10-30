@@ -3,15 +3,28 @@
 import logging
 import os.path
 
-import agora_analytica.loaders.yle_2019 as dataset
-from agora_analytica.loaders.utils import _instance_path
+from agora_analytica import (
+    instance_path
+)
+import agora_analytica.data.yle_2019 as dataset
 from agora_analytica.analytics import measure_distances
+from agora_analytica.data.interpolation.wikidata import finnish_parties
+
+import numpy as np
 
 import click
 
 from flask.json import dumps as jsonify
 
 debug = False
+
+logger = logging.getLogger(__name__)
+
+def _write(file, data, target=instance_path()):
+    """ Helper to write data into json file """
+
+    with open(os.path.join(target, f"{file}.json"), 'w') as f:
+        f.write(jsonify(data, indent=(4 if debug else 0)))
 
 
 @click.group()
@@ -34,7 +47,7 @@ def download(target=None):
 
 @cli.command()
 @click.option("--target", type=click.Path(file_okay=False),
-                          default=_instance_path(),
+                          default=instance_path(),
                           show_default=True)
 @click.option("--method", type=click.Choice(['linear', 'dummy']),
                           help="Distance approximation method.",
@@ -47,12 +60,6 @@ def build(target, limit, method):
     :param target: Target file
     :param limit: Limit processing into N candidates.
     """
-
-    def _write(file, data):
-        """ Helper to write data into json file """
-
-        with open(os.path.join(target, f"{file}.json"), 'w') as f:
-            f.write(jsonify(data, indent=(4 if debug else 0)))
 
     click.echo("Loading dataset ... ", nl=False)
     df = dataset.load_dataset()
@@ -70,8 +77,8 @@ def build(target, limit, method):
 
     data_nodes = [{
         "index": idx,
-        "name": row["nimi"],
-        "party": row["puolue"],
+        "name": row["name"],
+        "party": row["party"],
         "constituencies": row["vaalipiiri"]
     } for idx, row in df.iterrows()]
 
@@ -81,10 +88,78 @@ def build(target, limit, method):
         "target": int(l)
     } for i, d, l in distances.values]
 
-    _write("nodes", data_nodes)
-    _write("links", data_links)
+    _write("nodes", data_nodes, target)
+    _write("links", data_links, target)
 
     click.echo("[DONE]")
+
+
+@cli.command()
+@click.option("--target", type=click.Path(file_okay=False),
+                          default=instance_path(),
+                          show_default=True)
+def build_parties(target):
+    """
+    Build party data
+    """
+    from agora_analytica.data.interpolation.nearest import party_distances
+    from colorsys import rgb_to_hls, hls_to_rgb
+
+    df = dataset.load_dataset()
+    answers = dataset.linear_answers(df)
+
+    distance_matrix = party_distances(df, answers)
+
+    parties = df["party"].unique()
+    party_data = finnish_parties()
+
+    r = []
+
+    for party in parties:
+        data = {}
+
+        data = party_data.party(party)
+        if data:
+            logger.debug(f"Found party {data['itemLabel'][0]!r} for {party!r}")
+        else:
+            logger.debug(f"Did not found {party}")
+            data = {
+                "itemLabel": [party]
+            }
+
+        if "sRGB_color_hex_triplet" not in data:
+            # If color is missing, generate one by looking nearest
+            # two parties and calculating color between them.
+
+            # TODO Take note of distances
+            # Collect two colors
+            colors = []
+            for near_party, distance in distance_matrix[party]:
+                if len(colors) >= 2:
+                    continue
+                _p = party_data.party(near_party)
+                if _p and "sRGB_color_hex_triplet" in _p:
+                    logger.debug("Found nearby party %s for color approximation", _p['itemLabel'])
+                    colors.append(_p['sRGB_color_hex_triplet'][0])
+
+            # Convert colors into hues
+            hues = np.array([
+                rgb_to_hls(*_hex_to_rgb(colors[0])),
+                rgb_to_hls(*_hex_to_rgb(colors[1]))
+            ])
+
+            # Calculate mean for HLS, and convert back to hex
+            data['sRGB_color_hex_triplet'] = [
+                "%0.2X%0.2X%0.2X" % tuple(map(int, hls_to_rgb(*hues.mean(axis=0))))
+            ]
+
+        r.append(data)
+
+    _write("parties", r, target)
+
+
+def _hex_to_rgb(hex):
+    return tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
 
 
 if __name__ == "__main__":
