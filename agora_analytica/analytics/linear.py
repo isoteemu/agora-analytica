@@ -49,8 +49,8 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
         distance = np.abs(np.int(source[col]) - np.int(target[col])) * bias
         distances[i] = distance
 
-    distance_mean = distances.mean()
-    return distance_mean
+    distance_mean = distances.mean() or 0
+    return distance_mean if not np.isnan(distance_mean) else np.float(0)
 
 
 @cached(cache={}, key=lambda column, answers, answer_set: hashkey(column, answer_set))
