@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 
 from agora_analytica import instance_path
-from agora_analytica.loaders.utils import generate_names
+from agora_analytica.data.utils import generate_names
 
 
 def test_instancepath():
