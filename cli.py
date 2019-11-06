@@ -2,11 +2,12 @@
 
 import logging
 import os.path
+import importlib
 
 from agora_analytica import (
     instance_path
 )
-import agora_analytica.data.yle_2019 as dataset
+
 from agora_analytica.analytics import measure_distances
 from agora_analytica.data.interpolation.wikidata import finnish_parties
 
@@ -15,6 +16,8 @@ import numpy as np
 import click
 
 from flask.json import dumps as jsonify
+#from flask.cli import with_appcontext
+#from flask import url_for
 
 debug = False
 
@@ -35,11 +38,16 @@ def cli(debug):
 
 
 @cli.command()
-@click.option("--target", type=click.Path())
-def download(target=None):
+@click.option("--target", type=click.Path(file_okay=False),
+                          default=instance_path(),
+                          show_default=True)
+@click.option("--dataset-name", default="yle_2019", show_default=True)
+def download(target, dataset_name):
     """
     Download dataset
     """
+
+    dataset = importlib.import_module(f".{dataset_name}", "agora_analytica.data")
 
     dataset.download_dataset(target) if target else dataset.download_dataset()
     click.echo(f"Dataset downloaded")
@@ -52,8 +60,9 @@ def download(target=None):
 @click.option("--method", type=click.Choice(['linear', 'dummy']),
                           help="Distance approximation method.",
                           default="linear")
+@click.option("--dataset-name", default="yle_2019", show_default=True)
 @click.option("--limit", default=50)
-def build(target, limit, method):
+def build(target, method, dataset_name, limit:int = 50):
     """
     Build page.
 
@@ -62,6 +71,9 @@ def build(target, limit, method):
     """
 
     click.echo("Loading dataset ... ", nl=False)
+
+    dataset = importlib.import_module(f".{dataset_name}", "agora_analytica.data")
+
     df = dataset.load_dataset()
     if limit < 2:
         raise click.BadParameter("Build should include more than 2 candidates.", param_hint="--limit")
@@ -77,9 +89,10 @@ def build(target, limit, method):
 
     data_nodes = [{
         "index": idx,
-        "name": row["name"],
-        "party": row["party"],
-        "constituencies": row["vaalipiiri"]
+        "name": row.get("name"),
+        "party": row.get("party"),
+        "image": row.get("image", None),
+        # "constituencies": "asf"
     } for idx, row in df.iterrows()]
 
     data_links = [{
@@ -98,12 +111,15 @@ def build(target, limit, method):
 @click.option("--target", type=click.Path(file_okay=False),
                           default=instance_path(),
                           show_default=True)
-def build_parties(target):
+@click.option("--dataset-name", default="yle_2019", show_default=True)
+def build_parties(target, dataset_name):
     """
     Build party data
     """
     from agora_analytica.data.interpolation.nearest import party_distances
     from colorsys import rgb_to_hls, hls_to_rgb
+
+    dataset = importlib.import_module(f".{dataset_name}", "agora_analytica.data")
 
     df = dataset.load_dataset()
     answers = dataset.linear_answers(df)
