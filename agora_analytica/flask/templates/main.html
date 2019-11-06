@@ -17,8 +17,12 @@
   <link rel="stylesheet" href="{{url_for('static', filename='reset.css')}}">
 
     <style>
+    #graph svg {
+        display: block;
+    }
+
     .links line {
-        stroke: #000;
+        stroke: rgba(0, 0, 0, 0.692);
         stroke-opacity: 0.6;
     }
 
@@ -27,9 +31,13 @@
         stroke-width: 1.5px;
     }
 
-    #graph {
-        overflow:hidden;
+    .nodes .node-info {
+        display: none;
     }
+    .nodes .active .node-info {
+       display: block;
+    }
+
     </style>
 
 </head>
@@ -48,7 +56,6 @@ var nodes = [],
 
 var width = parseInt(window.innerWidth),
     height = parseInt(window.innerHeight);
-
 
 d3.json('{{url_for(".data_parties")}}', function(data) {
     parties = data;
@@ -112,15 +119,19 @@ function run() {
     {# HÄX - älä suorita ellei dataa ole ladattu. #}
     if(nodes.length == 0 || links.length == 0 || parties.length == 0) return;
 
-    // Link into nodes.
 
+    // Link into nodes.
     var svg = d3.select("#graph")
         .append("svg")
-            .attr("width", width-1)
-            .attr("height", height-1)
-            .call(d3.zoom().on("zoom", function () {
-                svg.attr("transform", d3.event.transform)
-        })).append("g");
+            .attr("width", width)
+            .attr("height", height);
+            
+    var zoom = d3.zoom()
+        .on("zoom", function () {
+            graph_layer.attr("transform", d3.event.transform)
+        });
+
+    var graph_layer = svg.call(zoom).append("g").attr("id", "graph_layer");
 
     var simulation = d3.forceSimulation()
         .force("link", d3.forceLink()
@@ -129,7 +140,7 @@ function run() {
         .force("charge", d3.forceManyBody())
         .force("center", d3.forceCenter(width / 2, height / 2));
 
-    var link = svg.append("g")
+    var link = graph_layer.append("g")
         .attr("class", "links")
         .selectAll("line")
         .data(links)
@@ -137,7 +148,7 @@ function run() {
         .append("line")
         .attr("stroke-width", 1);
 
-    var node = svg.append("g")
+    var node = graph_layer.append("g")
         .attr("class", "nodes")
         .selectAll("g")
         .data(nodes)
@@ -150,16 +161,23 @@ function run() {
         //     .on("start", dragstarted)
         //     .on("drag", dragged)
         //     .on("end", dragended));
+        .on("click", function(obj) {
+            var g = d3.select(this.parentElement);
+            var toggle = !g.classed("active");
+            g.classed("active", toggle);
+
+        });
 
     var lables = node.append("text")
         .text(function(d) {
-            return d.name;
+            return d.party;
         })
+        .classed("node-info", true)
         .attr('x', 6)
         .attr('y', 3);
 
     node.append("title")
-        .text(function(d) { return d.party; });
+        .text(function(d) { return d.name+"\n"+d.party; });
 
     simulation
         .nodes(nodes)
@@ -196,6 +214,18 @@ function run() {
         d.fx = null;
         d.fy = null;
     }
+
+    d3.select(window).on("resize", function() {
+        width = parseInt(window.innerWidth);
+        height = parseInt(window.innerHeight);
+
+        console.log("resize");
+
+        svg.attr("width", width)
+           .attr("height", height);
+
+    });
+
 }
 
 
