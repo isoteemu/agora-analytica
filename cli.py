@@ -57,10 +57,10 @@ def download(target, dataset_name):
 @click.option("--target", type=click.Path(file_okay=False),
                           default=instance_path(),
                           show_default=True)
-@click.option("--method", type=click.Choice(['linear', 'dummy']),
+@click.option("--method", type=click.Choice(['linear', 'dummy', 'multiselect']),
                           help="Distance approximation method.",
-                          default="linear")
-@click.option("--dataset-name", default="yle_2019", show_default=True)
+                          default="linear", multiple=True)
+@click.option("--dataset-name", default="jyy_ed_2019", show_default=True)
 @click.option("--limit", default=50)
 def build(target, method, dataset_name, limit:int = 50):
     """
@@ -75,14 +75,14 @@ def build(target, method, dataset_name, limit:int = 50):
     dataset = importlib.import_module(f".{dataset_name}", "agora_analytica.data")
 
     df = dataset.load_dataset()
+
     if limit < 2:
         raise click.BadParameter("Build should include more than 2 candidates.", param_hint="--limit")
     df = df.head(limit)
     click.echo("[DONE]")
 
     click.echo("Calculating distances ... ", nl=False)
-    answers = dataset.linear_answers(df)
-    distances = measure_distances(answers, method=method)
+    distances = measure_distances(df, methods=method)
     click.echo("[DONE]")
 
     click.echo("Writing data ... ", nl=False)
