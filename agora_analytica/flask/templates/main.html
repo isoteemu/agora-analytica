@@ -27,12 +27,12 @@
     }
 
     .nodes circle {
-        stroke: #fff;
         stroke-width: 1.5px;
     }
 
     .nodes .node-info {
         display: none;
+        z-index: 1000;
     }
     .nodes .active .node-info {
        display: block;
@@ -44,7 +44,10 @@
 
 <body>
 
-  <div id="graph"></div>
+  <div id="graph">
+    <svg></svg>
+
+  </div>
 
 
 <script src="https://d3js.org/d3.v4.js"></script>
@@ -56,6 +59,8 @@ var nodes = [],
 
 var width = parseInt(window.innerWidth),
     height = parseInt(window.innerHeight);
+
+var circleRadius = 5;
 
 d3.json('{{url_for(".data_parties")}}', function(data) {
     parties = data;
@@ -121,11 +126,39 @@ function run() {
 
 
     // Link into nodes.
-    var svg = d3.select("#graph")
-        .append("svg")
-            .attr("width", width)
-            .attr("height", height);
-            
+    var svg = d3.select("#graph svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    // <clipPath xmlns="http://www.w3.org/2000/svg" clipPathUnits="userSpaceOnUse" id="clipPath4571">
+    //     <circle id="circle4573" cx="96.35067" cy="121.53754" r="15.635266" style="stroke-width:0.26458332"/>
+    // </clipPath>
+    var defs = svg.append("defs");
+    defs.append("clipPath")
+        .attr("id", "clip-circle")
+        .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", circleRadius)
+
+    for(n of nodes) {
+        // <pattern id="img1" patternUnits="userSpaceOnUse" width="100%" height="650">
+        //     <image class='twombly' xlink:href="http://gastv.mx/wp-content/uploads/2014/05/jumex.jpg" x="-30" y="-30"
+        //         width="380" height="267" />
+        // </pattern>
+        var images = defs.append("pattern")
+            .attr("id", "node-"+n.index+"-image")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .append("image")
+                .attr("preserveAspectRatio", "xMidYMid slice")
+                .attr("xlink:href", n.image ? n.image : "{{url_for("static", filename="default-person.png")}}")
+                .attr("width", circleRadius * 2) 
+                .attr("height", circleRadius * 2);
+        
+        console.log(images)
+    }
+
     var zoom = d3.zoom()
         .on("zoom", function () {
             graph_layer.attr("transform", d3.event.transform)
@@ -154,9 +187,23 @@ function run() {
         .data(nodes)
         .enter().append("g")
         
+    // var images = node.append("image")
+    //     .attr("x", -circleRadius)
+    //     .attr("y", -circleRadius)
+    //     .attr("width", circleRadius * 2)
+    //     .attr("height", circleRadius * 2)
+    //     .attr("xlink:href", function(d) {
+    //         if (d.image)
+    //             return d.image;
+    //         else   
+    //             return "{{url_for("static", filename="default-person.png")}}";
+    //     })
+    //     .attr("clip-path", "url(#clip-circle)")
+
     var circles = node.append("circle")
-        .attr("r", 5)
-        .attr("fill", node_color)
+        .attr("r", circleRadius)
+        .attr("stroke", node_color)
+        .attr("fill", (d) => "url(#node-"+ d.index +"-image)")
         // .call(d3.drag()
         //     .on("start", dragstarted)
         //     .on("drag", dragged)
@@ -165,12 +212,11 @@ function run() {
             var g = d3.select(this.parentElement);
             var toggle = !g.classed("active");
             g.classed("active", toggle);
-
         });
 
-    var lables = node.append("text")
+    var labels = node.append("text")
         .text(function(d) {
-            return d.party;
+            return d.name + "\r\n(" + d.party +")";
         })
         .classed("node-info", true)
         .attr('x', 6)
