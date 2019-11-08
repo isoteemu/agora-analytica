@@ -7,7 +7,12 @@ import numpy as np
 from cachetools import cached
 from cachetools.keys import hashkey
 
+from . import _get_common_columns
+
 logger = logging.getLogger(__name__)
+
+
+ACCEPTED_TYPES = ["linear"]
 
 
 def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
@@ -22,7 +27,7 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
     """
 
     # Collect columns that source and target have both answered.
-    columns = set(source.dropna().index).intersection(set(target.dropna().index))
+    columns = _get_common_columns(source, target, answers)
 
     # Stores distances, and is used to calculate mean value.
     distances = np.zeros(len(columns))
@@ -49,8 +54,8 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
         distance = np.abs(np.int(source[col]) - np.int(target[col])) * bias
         distances[i] = distance
 
-    distance_mean = distances.mean()
-    return distance_mean
+    distance_mean = distances.mean() or 0
+    return distance_mean if not np.isnan(distance_mean) else np.float(0)
 
 
 @cached(cache={}, key=lambda column, answers, answer_set: hashkey(column, answer_set))

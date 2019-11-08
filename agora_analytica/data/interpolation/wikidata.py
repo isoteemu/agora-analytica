@@ -47,6 +47,23 @@ QUERY_PARTIES = """
 """
 
 
+class WDList(list):
+    def __init__(self, iterable):
+        if type(iterable) == dict:
+            iterable = list(iterable.values())
+
+        super().__init__(iterable)
+
+    def party(self, value, default=None):
+        party = default
+        try:
+            party = next( x for x in self if value in x['itemLabel'] or value in x.get('itemAltLabel', []))
+        except StopIteration:
+            pass
+        return party
+
+
+
 def wikidata_query(query):
     """ Perform sparql query """
     data = {}
@@ -73,8 +90,9 @@ def wikidata_query(query):
     return data
 
 
-def finnish_parties():
-    return wikidata_query(QUERY_PARTIES)
+def finnish_parties() -> WDList:
+    d = wikidata_query(QUERY_PARTIES)
+    return WDList(d)
 
 
 def finnish_politicians():

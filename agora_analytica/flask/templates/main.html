@@ -16,22 +16,51 @@
   #}
   <link rel="stylesheet" href="{{url_for('static', filename='reset.css')}}">
 
+    <style>
+    #graph svg {
+        display: block;
+    }
+
+    .links line {
+        stroke: rgba(0, 0, 0, 0.692);
+        stroke-opacity: 0.6;
+    }
+
+    .nodes circle {
+        stroke-width: 1.5px;
+    }
+
+    .nodes .node-info {
+        display: none;
+        z-index: 1000;
+    }
+    .nodes .active .node-info {
+       display: block;
+    }
+
+    </style>
+
 </head>
 
 <body>
 
-  <div id="graph" style="width:100vw; height:100vh;">
+  <div id="graph">
+    <svg></svg>
 
   </div>
 
 
-<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://d3js.org/d3.v4.js"></script>
 <script>
 
 var nodes = [],
     links = [],
     parties = [];
 
+var width = parseInt(window.innerWidth),
+    height = parseInt(window.innerHeight);
+
+var circleRadius = 5;
 
 d3.json('{{url_for(".data_parties")}}', function(data) {
     parties = data;
@@ -42,19 +71,23 @@ d3.json('{{url_for(".data_nodes")}}', function(data) {
     run();
 });
 d3.json('{{url_for(".data_links")}}', function(data) {
-
     var links_map = {};
     
+    var attrs = {};
+
     // Collect node links, from closest to furthest.
     data.sort((a, b) => a["distance"] - b["distance"] ).forEach((element) => {
-
 
         // Pointers to node indexes.
         source = element["source"];
         target = element["target"];
+        let k = [parseInt(source), parseInt(target)].sort();
 
         if(!(source in links_map)) links_map[source] = [];
         if(!(target in links_map)) links_map[target] = [];
+        if(!(k in attrs)) attrs[k] = {
+            distance: element.distance + 0.1
+        };
 
         // Pointers
         let src_links = links_map[source];
@@ -67,99 +100,180 @@ d3.json('{{url_for(".data_links")}}', function(data) {
     for(let source in links_map) {
         for(let target of links_map[source]) {
             let [src, trg] = [parseInt(source), parseInt(target)].sort();
-            links.push({source: src, target:trg});
+            links.push(Object.assign({
+                source: src,
+                target: trg
+            }, attrs[[src,trg]]));
         }
     }
 
     run();
 });
 
+function node_color(d) {
+    let party = parties.find(function(x) {
+        if(x.itemLabel.includes(d.party)) return true; 
+        if("itemAltLabel" in x) return x.itemAltLabel.includes(d.party)
+    });
+    let color = party && "sRGB_color_hex_triplet" in party ? "#"+party.sRGB_color_hex_triplet : "#CCC"
+
+    return color;
+}
+
 function run() {
     {# HÄX - älä suorita ellei dataa ole ladattu. #}
     if(nodes.length == 0 || links.length == 0 || parties.length == 0) return;
 
-    let w = parseInt(d3.select("#graph").style("width")),
-        h = parseInt(d3.select("#graph").style("height"));
 
     // Link into nodes.
-    links = links.map(function (l) {
-        return { source: nodes[l.source], target: nodes[l.target]}
-    });
+    var svg = d3.select("#graph svg")
+        .attr("width", width)
+        .attr("height", height);
 
-    var circleWidth = 5;
+    // <clipPath xmlns="http://www.w3.org/2000/svg" clipPathUnits="userSpaceOnUse" id="clipPath4571">
+    //     <circle id="circle4573" cx="96.35067" cy="121.53754" r="15.635266" style="stroke-width:0.26458332"/>
+    // </clipPath>
+    var defs = svg.append("defs");
+    defs.append("clipPath")
+        .attr("id", "clip-circle")
+        .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", circleRadius)
 
-    var fontFamily = 'Bree Serif',
-        fontSizeHighlight = '1.5em',
-        fontSizeNormal = '1em';
+    for(n of nodes) {
+        // <pattern id="img1" patternUnits="userSpaceOnUse" width="100%" height="650">
+        //     <image class='twombly' xlink:href="http://gastv.mx/wp-content/uploads/2014/05/jumex.jpg" x="-30" y="-30"
+        //         width="380" height="267" />
+        // </pattern>
+        var images = defs.append("pattern")
+            .attr("id", "node-"+n.index+"-image")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .append("image")
+                .attr("preserveAspectRatio", "xMidYMid slice")
+                .attr("xlink:href", n.image ? n.image : "{{url_for("static", filename="default-person.png")}}")
+                .attr("width", circleRadius * 2) 
+                .attr("height", circleRadius * 2);
+        
+        console.log(images)
+    }
 
-    var vis = d3.select("#graph")
-        .append("svg:svg")
-        .attr("class", "stage")
-        .attr("width", w)
-        .attr("height", h);
+    var zoom = d3.zoom()
+        .on("zoom", function () {
+            graph_layer.attr("transform", d3.event.transform)
+        });
 
-    var force = d3.layout.force()
-        .nodes(nodes)
-        .links([])
-        .gravity(0.3)
-        .charge(-500)
-        .size([w, h]);
+    var graph_layer = svg.call(zoom).append("g").attr("id", "graph_layer");
 
-    var link = vis.selectAll(".link")
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink()
+            .id(function(d) { return d.index; })
+            .distance(function(d) {return d.distance * 30;}))
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+    var link = graph_layer.append("g")
+        .attr("class", "links")
+        .selectAll("line")
         .data(links)
-        .enter().append("line")
-        .attr("class", "link")
-        .attr("stroke", "#CCC")
-        .attr("fill", "none");
+        .enter()
+        .append("line")
+        .attr("stroke-width", 1);
 
-    var node = vis.selectAll("circle.node")
+    var node = graph_layer.append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
         .data(nodes)
         .enter().append("g")
-        .attr("class", "node")
-        .attr("id", function (d) { return "node-"+d.index; })
+        
+    // var images = node.append("image")
+    //     .attr("x", -circleRadius)
+    //     .attr("y", -circleRadius)
+    //     .attr("width", circleRadius * 2)
+    //     .attr("height", circleRadius * 2)
+    //     .attr("xlink:href", function(d) {
+    //         if (d.image)
+    //             return d.image;
+    //         else   
+    //             return "{{url_for("static", filename="default-person.png")}}";
+    //     })
+    //     .attr("clip-path", "url(#clip-circle)")
 
-
-    //CIRCLE
-    node.append("svg:circle")
-        .attr("cx", function (d) { return d.x; })
-        .attr("cy", function (d) { return d.y; })
-        .attr("r", circleWidth)
-        .attr("fill", function (d, i) {
-
-            let party = parties.find(function(x) {
-                if(x.itemLabel.includes(d.party)) return true; 
-                if("itemAltLabel" in x) return x.itemAltLabel.includes(d.party)
-                });
-            let color = party && "sRGB_color_hex_triplet" in party ? "#"+party.sRGB_color_hex_triplet : "#CCC"
-
-            return color;
+    var circles = node.append("circle")
+        .attr("r", circleRadius)
+        .attr("stroke", node_color)
+        .attr("fill", (d) => "url(#node-"+ d.index +"-image)")
+        // .call(d3.drag()
+        //     .on("start", dragstarted)
+        //     .on("drag", dragged)
+        //     .on("end", dragended));
+        .on("click", function(obj) {
+            var g = d3.select(this.parentElement);
+            var toggle = !g.classed("active");
+            g.classed("active", toggle);
         });
 
-    //TEXT
-    node.append("text")
-        .text(function (d, i) { return "("+d.party+")"; })
-        .attr("x", function (d, i) { return circleWidth + 5; })
-        .attr("y", function (d, i) { if (i > 0) { return circleWidth + 0 } else { return 8 } })
-        .attr("font-family", "Bree Serif")
-        .attr("fill", function (d, i) { return "#333"; })
-        .attr("font-size", function (d, i) { return "0.4em"; })
-        .attr("text-anchor", function (d, i) { if (i > 0) { return "beginning"; } else { return "end" } })
+    var labels = node.append("text")
+        .text(function(d) {
+            return d.name + "\r\n(" + d.party +")";
+        })
+        .classed("node-info", true)
+        .attr('x', 6)
+        .attr('y', 3);
 
+    node.append("title")
+        .text(function(d) { return d.name+"\n"+d.party; });
 
+    simulation
+        .nodes(nodes)
+        .on("tick", ticked);
 
-    force.on("tick", function (e) {
-        node.attr("transform", function (d, i) {
+    simulation.force("link")
+        .links(links);
+
+    function ticked() {
+        link
+            .attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
+
+        node.attr("transform", function(d) {
             return "translate(" + d.x + "," + d.y + ")";
-        });
+        })
+    }
 
-        link.attr("x1", function (d) { return d.source.x; })
-            .attr("y1", function (d) { return d.source.y; })
-            .attr("x2", function (d) { return d.target.x; })
-            .attr("y2", function (d) { return d.target.y; })
+    function dragstarted(d) {
+        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+    }
+
+    function dragended(d) {
+        if (!d3.event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    d3.select(window).on("resize", function() {
+        width = parseInt(window.innerWidth);
+        height = parseInt(window.innerHeight);
+
+        console.log("resize");
+
+        svg.attr("width", width)
+           .attr("height", height);
+
     });
 
-    force.start();
 }
+
 
 </script>
 

@@ -4,7 +4,7 @@ import os.path
 import pandas as pd
 import numpy as np
 
-from agora_analytica.loaders.yle_2019 import (
+from agora_analytica.data.yle_2019 import (
     download_dataset,
     load_dataset,
     DATASET_NAME,
@@ -12,7 +12,7 @@ from agora_analytica.loaders.yle_2019 import (
 )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def yle_2019_df(instance_path):
     df = load_dataset(instance_path / DATASET_NAME)
     assert isinstance(df, pd.DataFrame)
@@ -42,7 +42,7 @@ def test_yle_data(yle_2019_df):
     assert yle_2019_df.shape[0] == 2437
 
     # Test for some existing columns
-    cols = ["vaalipiiri", "puolue", "nimi"]
+    cols = ["vaalipiiri", "party", "name"]
     for col in cols:
         assert col in yle_2019_df.columns
 
