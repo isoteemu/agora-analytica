@@ -58,7 +58,6 @@ for constituent in cont:
         fp.close()
 
 
-
 url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/parties"
 r = get(url)
 
@@ -67,7 +66,7 @@ print(cont)
 
 jsonToFile(cont,"parties")
 
-
+#Screippaus osotteet
 #Vaalipiirin ID:n saa: https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies
 #Vaalipiirin ehokkaat: https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies/<vaalipiirin-id>/candidates
 #Kandidaatin tiedot: https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies/<vaalipiirin-id>/candidates/<ehdokkaan-id>
