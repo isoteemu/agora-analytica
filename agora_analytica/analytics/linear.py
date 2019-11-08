@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+from typing import Tuple
 
 import pandas as pd
 import numpy as np
@@ -7,11 +7,16 @@ import numpy as np
 from cachetools import cached
 from cachetools.keys import hashkey
 
+from . import _get_common_columns
+
 logger = logging.getLogger(__name__)
 
 
+ACCEPTED_TYPES = ["linear"]
+
+
 def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
-        answer_scale=5, bias_min=0.2, bias_max=2.0) -> np.float:
+             answer_scale=5, bias_min=0.2, bias_max=2.0) -> float:
     """ Calculate distance between targets.
 
     Uses less common answers to skew bias.
@@ -19,16 +24,16 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
     :param scale: (optional) Scale on which questions are asked, starting from 1. Defaults to 5.
     :param bias_min: (optional) float Minimum allowed bias.
     :param bias_max: (optional) float Maximum allowed bias
-     """
-
-    # Stores distances, and is used to calculate mean value.
-    distances = pd.Series()
+    """
 
     # Collect columns that source and target have both answered.
-    columns = set(source.dropna().index).intersection(set(target.dropna().index))
+    columns = _get_common_columns(source, target, answers)
+
+    # Stores distances, and is used to calculate mean value.
+    distances = np.zeros(len(columns))
 
     # Go through answers, and calculate answer distances from source to target
-    for col in columns:
+    for i, col in enumerate(columns):
 
         # Collect answers into unique set.
         answers_set = tuple(set([
@@ -47,11 +52,11 @@ def distance(source: pd.Series, target: pd.Series, answers: pd.DataFrame,
 
         # Calculate distance between answers with bias.
         distance = np.abs(np.int(source[col]) - np.int(target[col])) * bias
+        distances[i] = distance
 
-        distances = distances.append(pd.Series([distance]), ignore_index=True)
+    distance_mean = distances.mean() or 0
+    return distance_mean if not np.isnan(distance_mean) else np.float(0)
 
-    distance_mean = distances.mean()
-    return distance_mean
 
 @cached(cache={}, key=lambda column, answers, answer_set: hashkey(column, answer_set))
 def _similar_counts(column: str, answers: pd.DataFrame, answers_set: Tuple[int]) -> Tuple[np.int, np.int]:
@@ -61,7 +66,7 @@ def _similar_counts(column: str, answers: pd.DataFrame, answers_set: Tuple[int])
     :return: Tuple of different and similar answers
     """
 
-    # Create boolean list of people who answered similarry to current `answers_set`
+    # Create boolean list of people who answered similarly to current `answers_set`
     similar_filter = answers[column].isin(answers_set)
 
     # Calculate similar and different answers
@@ -70,4 +75,3 @@ def _similar_counts(column: str, answers: pd.DataFrame, answers_set: Tuple[int])
     logger.debug("'%s': Similar/Different: %i / %i", column, similar_count, different_count)
 
     return (similar_count, different_count)
-
