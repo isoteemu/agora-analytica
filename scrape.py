@@ -29,7 +29,8 @@ def json_to_file (lista,name):
 def hae_dataa():
     url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies/"
     r = get(url)
-    cont = json.loads(r.content)
+    #cont = json.loads(r.content)
+    cont = r.json()
 
     dir = instance_path()
     if not os.path.exists(dir):
@@ -40,12 +41,12 @@ def hae_dataa():
 
     for constituent in cont:
         r = get("https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies/" + str(constituent["id"]) + "/candidates")
-        cont2 = json.loads(r.content)
+        cont2 = r.json()
         json_to_file(cont2,"constituent" + str(constituent["id"]))
 
         for candidate in cont2:
             r = get("https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies/" + str(constituent["id"]) + "/candidates/" + str(candidate["id"]))
-            cont3 = json.loads(r.content)
+            cont3 = r.json()
             json_to_file(cont3,"candidate" + str(candidate["id"]))
 
             try:
@@ -64,7 +65,7 @@ def hae_dataa():
 
     url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/parties"
     r = get(url)
-    cont = json.loads(r.content)
+    cont = r.json()
     #print(cont)
     json_to_file(cont,"parties")
     return
