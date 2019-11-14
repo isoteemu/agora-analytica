@@ -23,12 +23,7 @@ If data is not manually downloaded into `instance/` folder, script can automatic
 
 Calculate distances into `instance/` directory. Limit should be kept at reasonable low number for now.
 ```bash
-(.venv) $ python3 cli.py build --limit 50
-```
-
-For testing purposes "dummy" method and debug might be preferred:
-```bash
-(.venv) $ python3 cli.py --debug build --limit 50 --method dummy
+(.venv) $ python3 cli.py build --method linear --limit 50
 ```
 
 ## Starting local development webserver:
