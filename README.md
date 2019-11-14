@@ -32,6 +32,16 @@ For testing purposes "dummy" method and debug might be preferred:
 ```
 
 ## Starting local development webserver:
+
+Using bash:
 ```bash
-(.venv) $ FLASK_ENV=development FLASK_APP=agora_analytica.flask:app flask run
+    (.venv) $ FLASK_ENV=development FLASK_APP=agora_analytica.flask:app flask run
+```
+
+Windows ``command.com``
+
+```cmd
+> set FLASK_ENV=development
+> set FLASK_APP=agora_analytica.flask:app
+> flask run
 ```
