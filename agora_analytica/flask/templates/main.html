@@ -60,7 +60,7 @@ var nodes = [],
 var width = parseInt(window.innerWidth),
     height = parseInt(window.innerHeight);
 
-var circleRadius = 5;
+var circleRadius = 15;
 
 d3.json('{{url_for(".data_parties")}}', function(data) {
     parties = data;
@@ -86,7 +86,7 @@ d3.json('{{url_for(".data_links")}}', function(data) {
         if(!(source in links_map)) links_map[source] = [];
         if(!(target in links_map)) links_map[target] = [];
         if(!(k in attrs)) attrs[k] = {
-            distance: element.distance + 0.1
+            distance: element.distance + circleRadius / 10
         };
 
         // Pointers
@@ -207,7 +207,7 @@ function run() {
         // .call(d3.drag()
         //     .on("start", dragstarted)
         //     .on("drag", dragged)
-        //     .on("end", dragended));
+        //     .on("end", dragended))
         .on("click", function(obj) {
             var g = d3.select(this.parentElement);
             var toggle = !g.classed("active");
