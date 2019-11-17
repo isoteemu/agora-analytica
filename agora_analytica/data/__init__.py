@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 class DataSetInstance(pd.DataFrame):
     @property
     def _constructor(self):
@@ -18,3 +19,8 @@ class DataSetInstance(pd.DataFrame):
         """
         raise NotImplementedError()
 
+    def text_answers(self) -> pd.DataFrame:
+        """
+        Free text answers.
+        """
+        raise NotImplementedError()

@@ -104,7 +104,7 @@ def _get_common_columns(source: pd.Series, target: pd.Series, answers: pd.DataFr
     source_ans = set(source.dropna().index)
     target_ans = set(target.dropna().index)
 
-    columns = questions  & (source_ans & target_ans)
+    columns = questions & (source_ans & target_ans)
 
     if len(columns) == 0:
         raise ValueError("Zero common columns.")
