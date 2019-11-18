@@ -1,4 +1,4 @@
-from agora_analytica.data import jyy_ed_2019 as dataset
+from agora_analytica.data import yle_2019 as dataset
 from agora_analytica import instance_path
 
 import numpy as np
@@ -23,6 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
+
 def _instance_path():
     path = instance_path() / "lda"
     path.mkdir(exist_ok=True)
@@ -33,7 +34,13 @@ LDA_FILE = _instance_path() / "LDA.dat"
 WORDS_FILE = _instance_path() / "words.dat"
 
 
-def tokenize(sentence: str, use_suggestions=True) -> list:
+def tokenize_in_paragraphs(sentence, **kwargs):
+    """ Process in paragraphs """
+    paragraphs = re.split(r"\n\n|\r\n\r\n", sentence)
+    tokens = chain(*map(tokenize, paragraphs))
+    return tokens
+
+def tokenize(sentence: str, use_suggestions=True, voikko_lang="fi") -> list:
     """ Tokenize words using :class:`~Voikko`
 
     ..todo:
@@ -43,15 +50,20 @@ def tokenize(sentence: str, use_suggestions=True) -> list:
     """
     skip_words = [""]
 
+    # Keep track of spelling errors. If threshold increases too much, expect block not be in english.
+    err_count = 0
+    err_treshold = 0.5
+
     # Create list of words from string, separating from non-word characters.
     # Skip suffixes idicated by `:`
     r = [x for x in re.findall(r'''(
-        [\w]*           # Get all word characters
+        [\w-]*          # Get all word characters
         (?:[\w]+)       # ignore word characters after colon
     )''', sentence.lower(), re.VERBOSE + re.MULTILINE) if x not in skip_words]
 
     # Set up stemmer
-    v = Voikko("fi")
+    v = Voikko(voikko_lang)
+
 
     def _stem(word) -> list:
         """ Return :type:`list` of stemmed words.
@@ -64,7 +76,7 @@ def tokenize(sentence: str, use_suggestions=True) -> list:
         FINNISH_STOPWORD_CLASSES = ["huudahdussana", "seikkasana", "lukusana", "asemosana", "sidesana", "suhdesana", "kieltosana", None]
         # TODO: Käy kaikki löydetyt sanamuodot läpi.
         analysis = v.analyze(word)
-
+        nonlocal err_count
         if not analysis:
             # Get first suggestion.
             suggested, *xs = v.suggest(word) or [None]
@@ -77,6 +89,7 @@ def tokenize(sentence: str, use_suggestions=True) -> list:
                     analysis = v.analyze(word)
             else:
                 # No matches.
+                err_count += 1
                 analysis = []
 
         _word = None
@@ -84,12 +97,16 @@ def tokenize(sentence: str, use_suggestions=True) -> list:
             # Find first suitable iteration of word.
             _class = _word.get("CLASS", None)
             if _class not in FINNISH_STOPWORD_CLASSES:
-                return [_word.get('BASEFORM')]
+                return [_word.get('BASEFORM').lower()]
 
         # Fall back to given word.
         return [word.lower()]
 
     r = [x for x in chain(*map(_stem, r)) if x]
+    if len(r) * err_treshold < err_count:
+        # Too many spelling errors. Presume incorrect language, and disregard paragraph.
+        logger.debug("Too many spelling errors: %d of %d", err_count, len(r))
+        return []
 
     return r
 
@@ -102,6 +119,7 @@ vectorizer = object()
 words = list()
 
 try:
+
     lda = joblib.load(LDA_FILE)
     vectorizer = joblib.load(WORDS_FILE)
     words = vectorizer.get_feature_names()
