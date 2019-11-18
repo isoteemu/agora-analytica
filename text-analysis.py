@@ -43,9 +43,12 @@ def tokenize(sentence: str, use_suggestions=True) -> list:
     """
     skip_words = [""]
 
-    # Match words.
+    # Create list of words from string, separating from non-word characters.
     # Skip suffixes idicated by `:`
-    r = [x for x in re.findall(r'([\w]{0,}(?:[\w]+))', sentence.lower()) if x not in skip_words]
+    r = [x for x in re.findall(r'''(
+        [\w]*           # Get all word characters
+        (?:[\w]+)       # ignore word characters after colon
+    )''', sentence.lower(), re.VERBOSE + re.MULTILINE) if x not in skip_words]
 
     # Set up stemmer
     v = Voikko("fi")
@@ -58,9 +61,10 @@ def tokenize(sentence: str, use_suggestions=True) -> list:
         """
 
         # See: https://github.com/voikko/voikko-sklearn/blob/master/voikko_sklearn.py
-        FINNISH_STOPWORD_CLASSES = ["huudahdussana", "seikkasana", "lukusana", "asemosana", "sidesana", "suhdesana", "kieltosana"]
+        FINNISH_STOPWORD_CLASSES = ["huudahdussana", "seikkasana", "lukusana", "asemosana", "sidesana", "suhdesana", "kieltosana", None]
         # TODO: Käy kaikki löydetyt sanamuodot läpi.
         analysis = v.analyze(word)
+
         if not analysis:
             # Get first suggestion.
             suggested, *xs = v.suggest(word) or [None]
@@ -73,14 +77,17 @@ def tokenize(sentence: str, use_suggestions=True) -> list:
                     analysis = v.analyze(word)
             else:
                 # No matches.
-                analysis = [{}]
+                analysis = []
 
-        r = analysis[0] if analysis else {}
+        _word = None
+        for _word in analysis:
+            # Find first suitable iteration of word.
+            _class = _word.get("CLASS", None)
+            if _class not in FINNISH_STOPWORD_CLASSES:
+                return [_word.get('BASEFORM')]
 
-        if r.get("CLASS") in FINNISH_STOPWORD_CLASSES:
-            return [None]
-
-        return [r.get("BASEFORM", word.lower())]
+        # Fall back to given word.
+        return [word.lower()]
 
     r = [x for x in chain(*map(_stem, r)) if x]
 
