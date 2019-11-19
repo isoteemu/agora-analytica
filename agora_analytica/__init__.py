@@ -13,4 +13,4 @@ def instance_path() -> Path:
 
     path = Path(_path)
 
-    return path
+    return path.resolve()
