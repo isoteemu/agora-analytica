@@ -53,22 +53,19 @@ class VoikkoTokenizer():
             analysis = self.voikko.analyze(word)
 
             if not analysis:
+                # If analyze didn't produce results, try spellcheking
                 err_count += 1
+                analysis = []
 
-                # Get first suggestion.
-                suggested, *xs = self.voikko.suggest(word) or [None]
-                logger.debug(f"Voikko did not found word {word!r}; suggested spelling: {suggested!r}")
+                if use_suggestions:
+                    # Get first suggestion.
+                    suggested, *xs = self.voikko.suggest(word) or [None]
+                    logger.debug(f"Voikko did not found word {word!r}; suggested spelling: {suggested!r}")
 
-                if suggested is not None:
-                    if use_suggestions:
+                    if suggested is not None:
+                        # return tokenized suggestion - It can be two or more words.
                         return self.tokenize_paragraph(suggested, use_suggestions=False)
-                    else:
-                        analysis = self.voikko.analyze(word)
-                else:
-                    # No matches.
-                    analysis = []
 
-            _word = None
             for _word in analysis:
                 # Find first suitable iteration of word.
                 _class = _word.get("CLASS", None)
