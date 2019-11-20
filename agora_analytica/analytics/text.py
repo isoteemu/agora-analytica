@@ -1,8 +1,19 @@
-from voikko.libvoikko import Voikko
+from .. import instance_path
+
 import re
 
+import pandas as pd
+import numpy as np
+import joblib
+
+from stop_words import get_stop_words
+from voikko.libvoikko import Voikko
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation as LDA
+
 from itertools import chain
-from typing import List
+from typing import List, Dict
 import logging
 
 from cachetools import cached
@@ -11,8 +22,10 @@ logger = logging.getLogger(__name__)
 
 
 class VoikkoTokenizer():
+
     """ Tokenize text """
     def __init__(self, lang="fi"):
+        self.stem_map = {}
         self.voikko = Voikko(lang)
         self.regex_words = re.compile(r"""
             (\w+-\w+|\w*)          # Get all word characters
@@ -39,7 +52,6 @@ class VoikkoTokenizer():
         # Spell check mistake counters
         err_count = 0
 
-        @cached({})
         def _stem(word: str) -> List[str]:
             """ Return :type:`list` of stemmed words.
 
@@ -49,6 +61,14 @@ class VoikkoTokenizer():
 
             # See: https://github.com/voikko/voikko-sklearn/blob/master/voikko_sklearn.py
             FINNISH_STOPWORD_CLASSES = ["huudahdussana", "seikkasana", "lukusana", "asemosana", "sidesana", "suhdesana", "kieltosana"]
+
+            # Check for previous stemming result
+            stemmed_word = self.stem_map.get(word, None)
+            if stemmed_word is False:
+                err_count += 1
+                return [word.lower()]
+            elif stemmed_word is not None:
+                return [stemmed_word]
 
             analysis = self.voikko.analyze(word)
 
@@ -65,14 +85,19 @@ class VoikkoTokenizer():
                     if suggested is not None:
                         # return tokenized suggestion - It can be two or more words.
                         return self.tokenize_paragraph(suggested, use_suggestions=False)
+                    else:
+                        self.stem_map[word] = False
 
             for _word in analysis:
                 # Find first suitable iteration of word.
                 _class = _word.get("CLASS", None)
                 if _class not in FINNISH_STOPWORD_CLASSES:
-                    return [_word.get('BASEFORM').lower()]
+                    baseform = _word.get('BASEFORM').lower()
+                    self.stem_map[word] = baseform
+                    return [baseform]
 
             # Fall back to given word.
+            self.stem_map[word] = word.lower()
             return [word.lower()]
 
         # Create list of words from string, separating from non-word characters.
@@ -85,3 +110,100 @@ class VoikkoTokenizer():
             return []
 
         return r
+
+
+__tokenizer = VoikkoTokenizer()
+
+def tokenizer(word):
+    return __tokenizer.tokenize(word)
+
+class TextTopics():
+    def __init__(self,
+                 df: pd.DataFrame,
+                 number_topics=50,
+                 instance_path=instance_path()):
+        self._instance_path = instance_path
+        self.number_topics = number_topics
+        self.stop_words: List = get_stop_words("fi")
+        self._count_vector: CountVectorizer = None
+        self._lda: LDA = None
+        self.init(df)
+
+    def init(self, df):
+        if self._count_vector and self._lda:
+            return True
+        f_words = self.instance_path() / "word.dat"
+        f_lda = self.instance_path() / "lda.dat"
+
+        try:
+            self._count_vector = joblib.load(f_words)
+            self._lda = joblib.load(f_lda)
+        except FileNotFoundError:
+            texts = [x for x in df.to_numpy().flatten() if x is not np.NaN]
+
+            # Setup word count vector
+            self._count_vector = CountVectorizer(
+                tokenizer=tokenizer,
+                stop_words=self.stop_words
+            )
+            count_data = self._count_vector.fit_transform(texts)
+
+            self._lda = LDA(n_components=self.number_topics, n_jobs=-1)
+            self._lda.fit(count_data)
+
+            joblib.dump(self._count_vector, f_words)
+            joblib.dump(self._lda, f_lda)
+
+    def instance_path(self):
+        path = self._instance_path / "lda" / str(self.number_topics)
+        path.mkdir(exist_ok=True, parents=True)
+        return path
+
+    def compare_series(self, source, target):
+
+        # Convert them into tuples, so they can be cached.
+        _source = tuple(source.dropna())
+        _target = tuple(target.dropna())
+        source_topics = self._get_topics(_source)
+        target_topics = self._get_topics(_target)
+
+        diffs = source_topics - target_topics
+
+        topic_max = np.argmax(diffs)
+        topic_min = np.argmin(diffs)
+
+        source_topic = self.find_topic_word(_source, topic_max)
+        target_topic = self.find_topic_word(_target, topic_min)
+
+        return ((topic_max, source_topic), (topic_min, target_topic))
+
+    @cached({})
+    def _get_topics(self, source):
+        source_count = self._count_vector.transform(source)
+        return self._lda.transform(source_count).mean(axis=0)
+
+    @cached({})
+    def find_topic_word(self, text: List, topic_id):
+        source = pd.Series(tokenizer("\n".join(text))).value_counts()
+
+        words = pd.Series(self.topic_words(topic_id))
+        counts = source * words
+
+        return "%s (%d)" % (counts.sort_values(ascending=False).axes[0][0], topic_id)
+
+
+
+    @cached({})
+    def topic_words(self, id: int) -> Dict[int, str]:
+        words = self.vector_words()
+        topic_words = self._lda.components_[id].argsort()[::-1]
+
+        return {words[i]: self._lda.components_[id][i] for i in topic_words}
+
+    @cached({})
+    def vector_words(self) -> List:
+        return self._count_vector.get_feature_names()
+
+
+def analyze_text(df: pd.DataFrame, topic_number=50):
+    pass

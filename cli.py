@@ -9,7 +9,9 @@ from agora_analytica import (
 )
 
 from agora_analytica.analytics import measure_distances
+from agora_analytica.analytics.text import TextTopics
 from agora_analytica.data.interpolation.wikidata import finnish_parties
+
 
 import numpy as np
 
@@ -20,6 +22,7 @@ from flask.json import dumps as jsonify
 #from flask import url_for
 
 debug = False
+number_topics = 30
 
 logger = logging.getLogger(__name__)
 
@@ -85,22 +88,48 @@ def build(target, method, dataset_name, limit:int = 50):
     distances = measure_distances(df, methods=method)
     click.echo("[DONE]")
 
-    click.echo("Writing data ... ", nl=False)
+    click.echo("Analyzing text ... ", nl=False)
+    texts_df = df.text_answers().sort_index()
+    topics = TextTopics(texts_df, number_topics=number_topics)
+    words = {}
 
+    with click.progressbar(texts_df.iterrows(), length=texts_df.shape[0]) as texts:
+
+        for i, x in texts:
+            x = x.dropna()
+            if len(x) == 0:
+                continue
+
+            for l, y in texts_df.iterrows():
+                if l <= i:
+                    continue
+                y = y.dropna()
+                if len(y) == 0:
+                    continue
+
+                r = topics.compare_series(x, y)
+                words[(i, l)] = r[0][1]
+                words[(l, i)] = r[1][1]
+
+    click.echo("[DONE]")
+
+    click.echo("Generating structures ... ", nl=False)
     data_nodes = [{
         "index": idx,
         "name": row.get("name"),
         "party": row.get("party"),
         "image": row.get("image", None),
-        # "constituencies": "asf"
     } for idx, row in df.iterrows()]
 
     data_links = [{
         "source": int(i),
+        "source_term": words.get((i, l), None),
         "distance": float(d),
+        "target_term": words.get((l, i), None),
         "target": int(l)
     } for i, d, l in distances.values]
 
+    click.echo("Writing data ... ", nl=False)
     _write("nodes", data_nodes, target)
     _write("links", data_links, target)
 

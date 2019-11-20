@@ -24,10 +24,12 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
+number_topics = 30
 
-def _instance_path():
-    path = instance_path() / "lda"
-    path.mkdir(exist_ok=True)
+
+def _instance_path(prefix=number_topics):
+    path = instance_path() / "lda" / str(prefix)
+    path.mkdir(exist_ok=True, parents=True)
     return path
 
 
@@ -35,7 +37,6 @@ LDA_FILE = _instance_path() / "LDA.dat"
 WORDS_FILE = _instance_path() / "words.dat"
 
 text_df = dataset.load_dataset().text_answers()
-number_topics = 10
 
 lda = object()
 vectorizer = object()
@@ -62,8 +63,7 @@ except Exception as e:
     stop_words += ["tulla", "opiskelija", "kyy", "kaikki"]
 
     vectorizer = CountVectorizer(tokenizer=_tokenizer,
-                                 stop_words=stop_words,
-                                 lowercase=False)
+                                 stop_words=stop_words)
 
     count_data = vectorizer.fit_transform(texts)
 
@@ -79,7 +79,7 @@ except Exception as e:
 
 number_words = 15
 
-suitable_topic_classes = ["nimisana"]
+suitable_topic_classes = ["nimisana", "nimi"]
 
 topic_labels = {}
 topics = np.array([x.argsort()[::-1] for x in lda.components_])
@@ -88,7 +88,7 @@ v = Voikko("fi")
 def _is_suitable_label(word) -> bool:
     r = v.analyze(word) or []
     for w in r:
-        if w.get("CLASS") in ["nimisana"]:
+        if w.get("CLASS") in suitable_topic_classes:
             return True
         else:
             logger.debug("%s CLASS is %s", word, w.get("CLASS"))
