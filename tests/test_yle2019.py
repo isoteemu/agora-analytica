@@ -7,8 +7,7 @@ import numpy as np
 from agora_analytica.data.yle_2019 import (
     download_dataset,
     load_dataset,
-    DATASET_NAME,
-    linear_answers,
+    DATASET_NAME
 )
 
 
@@ -53,7 +52,7 @@ def test_linears(yle_2019_df):
     """
 
     allowed = [np.int(1), np.int(2), np.int(3), np.int(4), np.int(5), np.NaN]
-    linears = linear_answers(yle_2019_df)
+    linears = yle_2019_df.linear_answers()
     # Generate similar dataframe, but with all True values.
     mask = pd.DataFrame([[True] * linears.shape[1]] * linears.shape[0], columns=linears.columns, index=linears.index)
 
