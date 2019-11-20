@@ -1,285 +1,332 @@
 <!doctype html>
 
 <html lang="en">
+
 <head>
-  <meta charset="utf-8">
+    <meta charset="utf-8">
 
-  <title>Agora Analytica</title>
-  <meta name="description" content="">
-  <meta name="author" content="">
+    <title>Agora Analytica</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
 
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-  {#
-    Reset CSS on vain poistamassa padding, margin, ja muut legacy asiat.
-    Jos käytetään jotain websivun frameworkkia, voidaan se poistaa ongelmitta.
-    ddddd
-  #}
-  <link rel="stylesheet" href="{{url_for('static', filename='reset.css')}}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
 
     <style>
-    #graph svg {
-        display: block;
-    }
+        #graph svg {
+            display: block;
+        }
 
-    .links line {
-        stroke: rgba(0, 0, 0, 0.692);
-        stroke-opacity: 0.6;
-    }
+        .links line {
+            stroke: rgba(0, 0, 0, 0.692);
+            stroke-opacity: 0.6;
+        }
 
-    .nodes circle {
-        stroke-width: 1.5px;
-    }
+        .nodes circle {
+            stroke-width: 1.5px;
+        }
 
-    .nodes .node-info {
-        display: none;
-        z-index: 1000;
-    }
-    .nodes .active .node-info {
-       display: block;
-    }
+        .nodes .node-info {
+            display: none;
+            z-index: 1000;
+        }
 
+        .nodes .active .node-info {
+            display: block;
+        }
     </style>
 
 </head>
 
 <body>
 
-  <div id="graph">
-    <svg></svg>
+    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+        <a class=" navbar-brand" href="#">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" style="width:100px;">
+        </a>
 
-  </div>
+        <div class="navbar-collapse" id="main-navigation">
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Vaalipiirit</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" class="small" data-value="option1" tabIndex="-1"><input
+                                    type="checkbox" />&nbsp;Vaalipiiri A</a></li>
+                        <li><a href="#" class="small" data-value="option2" tabIndex="-1"><input
+                                    type="checkbox" />&nbsp;Vaalipiiri B</a></li>
+                        <li><a href="#" class="small" data-value="option3" tabIndex="-1"><input
+                                    type="checkbox" />&nbsp;Vaalipiiri C</a></li>
+                    </ul>
+                </li>
 
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Puolueet</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" class="small" data-value="option1" tabIndex="-1"><input
+                                    type="checkbox" />&nbsp;Puolue A</a></li>
+                        <li><a href="#" class="small" data-value="option2" tabIndex="-1"><input
+                                    type="checkbox" />&nbsp;Puolue B</a></li>
+                        <li><a href="#" class="small" data-value="option3" tabIndex="-1"><input
+                                    type="checkbox" />&nbsp;Puolue C</a></li>
+                    </ul>
+                </li>
+        </div>
+    </nav>
+    <div id="graph">
+        <svg></svg>
 
-<script src="https://d3js.org/d3.v4.js"></script>
-<script>
+    </div>
 
-var nodes = [],
-    links = [],
-    parties = [];
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script>
 
-var width = parseInt(window.innerWidth),
-    height = parseInt(window.innerHeight);
+        var nodes = [],
+            links = [],
+            parties = [];
 
-var circleRadius = 5;
+        var width = parseInt(window.innerWidth),
+            height = parseInt(window.innerHeight);
 
-d3.json('{{url_for(".data_parties")}}', function(data) {
-    parties = data;
-    run();
-});
-d3.json('{{url_for(".data_nodes")}}', function(data) {
-    nodes = data;
-    run();
-});
-d3.json('{{url_for(".data_links")}}', function(data) {
-    var links_map = {};
-    
-    var attrs = {};
+        var circleRadius = 5;
 
-    // Collect node links, from closest to furthest.
-    data.sort((a, b) => a["distance"] - b["distance"] ).forEach((element) => {
+        d3.json('{{url_for(".data_parties")}}', function (data) {
+            parties = data;
+            run();
+        });
+        d3.json('{{url_for(".data_nodes")}}', function (data) {
+            nodes = data;
+            run();
+        });
+        d3.json('{{url_for(".data_links")}}', function (data) {
+            var links_map = {};
 
-        // Pointers to node indexes.
-        source = element["source"];
-        target = element["target"];
-        let k = [parseInt(source), parseInt(target)].sort();
+            var attrs = {};
 
-        if(!(source in links_map)) links_map[source] = [];
-        if(!(target in links_map)) links_map[target] = [];
-        if(!(k in attrs)) attrs[k] = {
-            distance: element.distance + 0.1
-        };
+            // Collect node links, from closest to furthest.
+            data.sort((a, b) => a["distance"] - b["distance"]).forEach((element) => {
 
-        // Pointers
-        let src_links = links_map[source];
-        let trg_links = links_map[target];
+                // Pointers to node indexes.
+                source = element["source"];
+                target = element["target"];
+                let k = [parseInt(source), parseInt(target)].sort();
 
-        if( src_links.length < 3) src_links.push(target);
-        if( trg_links.length < 3) trg_links.push(source);
-    });
+                if (!(source in links_map)) links_map[source] = [];
+                if (!(target in links_map)) links_map[target] = [];
+                if (!(k in attrs)) attrs[k] = {
+                    distance: element.distance + 0.1
+                };
 
-    for(let source in links_map) {
-        for(let target of links_map[source]) {
-            let [src, trg] = [parseInt(source), parseInt(target)].sort();
-            links.push(Object.assign({
-                source: src,
-                target: trg
-            }, attrs[[src,trg]]));
+                // Pointers
+                let src_links = links_map[source];
+                let trg_links = links_map[target];
+
+                if (src_links.length < 3) src_links.push(target);
+                if (trg_links.length < 3) trg_links.push(source);
+            });
+
+            for (let source in links_map) {
+                for (let target of links_map[source]) {
+                    let [src, trg] = [parseInt(source), parseInt(target)].sort();
+                    links.push(Object.assign({
+                        source: src,
+                        target: trg
+                    }, attrs[[src, trg]]));
+                }
+            }
+
+            run();
+        });
+
+        function node_color(d) {
+            let party = parties.find(function (x) {
+                if (x.itemLabel.includes(d.party)) return true;
+                if ("itemAltLabel" in x) return x.itemAltLabel.includes(d.party)
+            });
+            let color = party && "sRGB_color_hex_triplet" in party ? "#" + party.sRGB_color_hex_triplet : "#CCC"
+
+            return color;
         }
-    }
 
-    run();
-});
-
-function node_color(d) {
-    let party = parties.find(function(x) {
-        if(x.itemLabel.includes(d.party)) return true; 
-        if("itemAltLabel" in x) return x.itemAltLabel.includes(d.party)
-    });
-    let color = party && "sRGB_color_hex_triplet" in party ? "#"+party.sRGB_color_hex_triplet : "#CCC"
-
-    return color;
-}
-
-function run() {
-    {# HÄX - älä suorita ellei dataa ole ladattu. #}
-    if(nodes.length == 0 || links.length == 0 || parties.length == 0) return;
+        function run() {
+            { # HÄX - älä suorita ellei dataa ole ladattu.# }
+            if (nodes.length == 0 || links.length == 0 || parties.length == 0) return;
 
 
-    // Link into nodes.
-    var svg = d3.select("#graph svg")
-        .attr("width", width)
-        .attr("height", height);
+            // Link into nodes.
+            var svg = d3.select("#graph svg")
+                .attr("width", width)
+                .attr("height", height);
 
-    // <clipPath xmlns="http://www.w3.org/2000/svg" clipPathUnits="userSpaceOnUse" id="clipPath4571">
-    //     <circle id="circle4573" cx="96.35067" cy="121.53754" r="15.635266" style="stroke-width:0.26458332"/>
-    // </clipPath>
-    var defs = svg.append("defs");
-    defs.append("clipPath")
-        .attr("id", "clip-circle")
-        .append("circle")
-            .attr("cx", 0)
-            .attr("cy", 0)
-            .attr("r", circleRadius)
+            // <clipPath xmlns="http://www.w3.org/2000/svg" clipPathUnits="userSpaceOnUse" id="clipPath4571">
+            //     <circle id="circle4573" cx="96.35067" cy="121.53754" r="15.635266" style="stroke-width:0.26458332"/>
+            // </clipPath>
+            var defs = svg.append("defs");
+            defs.append("clipPath")
+                .attr("id", "clip-circle")
+                .append("circle")
+                .attr("cx", 0)
+                .attr("cy", 0)
+                .attr("r", circleRadius)
 
-    for(n of nodes) {
-        // <pattern id="img1" patternUnits="userSpaceOnUse" width="100%" height="650">
-        //     <image class='twombly' xlink:href="http://gastv.mx/wp-content/uploads/2014/05/jumex.jpg" x="-30" y="-30"
-        //         width="380" height="267" />
-        // </pattern>
-        var images = defs.append("pattern")
-            .attr("id", "node-"+n.index+"-image")
-            .attr("width", "100%")
-            .attr("height", "100%")
-            .append("image")
-                .attr("preserveAspectRatio", "xMidYMid slice")
-                .attr("xlink:href", n.image ? n.image : "{{url_for("static", filename="default-person.png")}}")
-                .attr("width", circleRadius * 2) 
-                .attr("height", circleRadius * 2);
-        
-        console.log(images)
-    }
+            for (n of nodes) {
+                // <pattern id="img1" patternUnits="userSpaceOnUse" width="100%" height="650">
+                //     <image class='twombly' xlink:href="http://gastv.mx/wp-content/uploads/2014/05/jumex.jpg" x="-30" y="-30"
+                //         width="380" height="267" />
+                // </pattern>
+                var images = defs.append("pattern")
+                    .attr("id", "node-" + n.index + "-image")
+                    .attr("width", "100%")
+                    .attr("height", "100%")
+                    .append("image")
+                    .attr("preserveAspectRatio", "xMidYMid slice")
+                    .attr("xlink:href", n.image ? n.image : "{{url_for("static", filename="default -person.png")}}")
+                    .attr("width", circleRadius * 2)
+                    .attr("height", circleRadius * 2);
 
-    var zoom = d3.zoom()
-        .on("zoom", function () {
-            graph_layer.attr("transform", d3.event.transform)
-        });
+                console.log(images)
+            }
 
-    var graph_layer = svg.call(zoom).append("g").attr("id", "graph_layer");
+            var zoom = d3.zoom()
+                .on("zoom", function () {
+                    graph_layer.attr("transform", d3.event.transform)
+                });
 
-    var simulation = d3.forceSimulation()
-        .force("link", d3.forceLink()
-            .id(function(d) { return d.index; })
-            .distance(function(d) {return d.distance * 30;}))
-        .force("charge", d3.forceManyBody())
-        .force("center", d3.forceCenter(width / 2, height / 2));
+            var graph_layer = svg.call(zoom).append("g").attr("id", "graph_layer");
 
-    var link = graph_layer.append("g")
-        .attr("class", "links")
-        .selectAll("line")
-        .data(links)
-        .enter()
-        .append("line")
-        .attr("stroke-width", 1);
+            var simulation = d3.forceSimulation()
+                .force("link", d3.forceLink()
+                    .id(function (d) { return d.index; })
+                    .distance(function (d) { return d.distance * 30; }))
+                .force("charge", d3.forceManyBody())
+                .force("center", d3.forceCenter(width / 2, height / 2));
 
-    var node = graph_layer.append("g")
-        .attr("class", "nodes")
-        .selectAll("g")
-        .data(nodes)
-        .enter().append("g")
-        
-    // var images = node.append("image")
-    //     .attr("x", -circleRadius)
-    //     .attr("y", -circleRadius)
-    //     .attr("width", circleRadius * 2)
-    //     .attr("height", circleRadius * 2)
-    //     .attr("xlink:href", function(d) {
-    //         if (d.image)
-    //             return d.image;
-    //         else   
-    //             return "{{url_for("static", filename="default-person.png")}}";
-    //     })
-    //     .attr("clip-path", "url(#clip-circle)")
+            var link = graph_layer.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(links)
+                .enter()
+                .append("line")
+                .attr("stroke-width", 1);
 
-    var circles = node.append("circle")
-        .attr("r", circleRadius)
-        .attr("stroke", node_color)
-        .attr("fill", (d) => "url(#node-"+ d.index +"-image)")
-        // .call(d3.drag()
-        //     .on("start", dragstarted)
-        //     .on("drag", dragged)
-        //     .on("end", dragended));
-        .on("click", function(obj) {
-            var g = d3.select(this.parentElement);
-            var toggle = !g.classed("active");
-            g.classed("active", toggle);
-        });
+            var node = graph_layer.append("g")
+                .attr("class", "nodes")
+                .selectAll("g")
+                .data(nodes)
+                .enter().append("g")
 
-    var labels = node.append("text")
-        .text(function(d) {
-            return d.name + "\r\n(" + d.party +")";
-        })
-        .classed("node-info", true)
-        .attr('x', 6)
-        .attr('y', 3);
+            // var images = node.append("image")
+            //     .attr("x", -circleRadius)
+            //     .attr("y", -circleRadius)
+            //     .attr("width", circleRadius * 2)
+            //     .attr("height", circleRadius * 2)
+            //     .attr("xlink:href", function(d) {
+            //         if (d.image)
+            //             return d.image;
+            //         else   
+            //             return "{{url_for("static", filename="default-person.png")}}";
+            //     })
+            //     .attr("clip-path", "url(#clip-circle)")
 
-    node.append("title")
-        .text(function(d) { return d.name+"\n"+d.party; });
+            var circles = node.append("circle")
+                .attr("r", circleRadius)
+                .attr("stroke", node_color)
+                .attr("fill", (d) => "url(#node-" + d.index + "-image)")
+                // .call(d3.drag()
+                //     .on("start", dragstarted)
+                //     .on("drag", dragged)
+                //     .on("end", dragended));
+                .on("click", function (obj) {
+                    var g = d3.select(this.parentElement);
+                    var toggle = !g.classed("active");
+                    g.classed("active", toggle);
+                });
 
-    simulation
-        .nodes(nodes)
-        .on("tick", ticked);
+            var labels = node.append("text")
+                .text(function (d) {
+                    return d.name + "\r\n(" + d.party + ")";
+                })
+                .classed("node-info", true)
+                .attr('x', 6)
+                .attr('y', 3);
 
-    simulation.force("link")
-        .links(links);
+            node.append("title")
+                .text(function (d) { return d.name + "\n" + d.party; });
 
-    function ticked() {
-        link
-            .attr("x1", function(d) { return d.source.x; })
-            .attr("y1", function(d) { return d.source.y; })
-            .attr("x2", function(d) { return d.target.x; })
-            .attr("y2", function(d) { return d.target.y; });
+            simulation
+                .nodes(nodes)
+                .on("tick", ticked);
 
-        node.attr("transform", function(d) {
-            return "translate(" + d.x + "," + d.y + ")";
-        })
-    }
+            simulation.force("link")
+                .links(links);
 
-    function dragstarted(d) {
-        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
-    }
+            function ticked() {
+                link
+                    .attr("x1", function (d) { return d.source.x; })
+                    .attr("y1", function (d) { return d.source.y; })
+                    .attr("x2", function (d) { return d.target.x; })
+                    .attr("y2", function (d) { return d.target.y; });
 
-    function dragged(d) {
-        d.fx = d3.event.x;
-        d.fy = d3.event.y;
-    }
+                node.attr("transform", function (d) {
+                    return "translate(" + d.x + "," + d.y + ")";
+                })
+            }
 
-    function dragended(d) {
-        if (!d3.event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
-    }
+            function dragstarted(d) {
+                if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
 
-    d3.select(window).on("resize", function() {
-        width = parseInt(window.innerWidth);
-        height = parseInt(window.innerHeight);
+            function dragged(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
 
-        console.log("resize");
+            function dragended(d) {
+                if (!d3.event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
 
-        svg.attr("width", width)
-           .attr("height", height);
+            d3.select(window).on("resize", function () {
+                width = parseInt(window.innerWidth);
+                height = parseInt(window.innerHeight);
 
-    });
+                console.log("resize");
 
-}
+                svg.attr("width", width)
+                    .attr("height", height);
+
+            });
+
+        }
+    </script>
+
+    <footer class="page-footer bg-dark text-white" <div class="container">
+        </div>
+
+        <div class="footer-copyright text-center color"> Agora Analytica 2019 -
+            <a href="https://opensource.org/licenses/MIT"> MIT-lisenssi</a>
+        </div>
+
+    </footer>
 
 
-</script>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
+
 
 </body>
+
 </html>

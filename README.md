@@ -23,15 +23,10 @@ If data is not manually downloaded into `instance/` folder, script can automatic
 
 Calculate distances into `instance/` directory. Limit should be kept at reasonable low number for now.
 ```bash
-(.venv) $ python3 cli.py build --method linear --limit 50
+(.venv) $ python3 --debug cli.py build --method linear --limit 50
 ```
 
-## Starting local development webserver:
-
-Using bash:
-```bash
-    (.venv) $ FLASK_ENV=development FLASK_APP=agora_analytica.flask:app flask run
-```
+## Starting local development webserver
 
 Windows ``command.com``
 
@@ -39,4 +34,19 @@ Windows ``command.com``
 > set FLASK_ENV=development
 > set FLASK_APP=agora_analytica.flask:app
 > flask run
+```
+
+Windows PowerShell
+
+```ps
+
+$env:FLASK_ENV = "development"
+$env:FLASK_APP = "agora_analytica.flask:app"
+flask run
+```
+
+Bash:
+
+```bash
+(.venv) $ FLASK_ENV=development FLASK_APP=agora_analytica.flask:app flask run
 ```
