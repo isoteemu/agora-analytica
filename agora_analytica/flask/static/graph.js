@@ -95,7 +95,7 @@ function run() {
             .attr("height", "100%")
             .append("image")
                 .attr("preserveAspectRatio", "xMidYMid slice")
-                .attr("xlink:href", n.image)
+                .attr("xlink:href", n.image ? n.image : default_image)
                 .attr("width", circleRadius * 2) 
                 .attr("height", circleRadius * 2);
 
@@ -139,9 +139,7 @@ function run() {
                 topics.filter((x) => x.source == g.data()[0].index)
             ).enter().append("g")
                 .classed("topic", true)
-                .attr("style", "outline: 1px black solid;")
                 .append("text")
-                    // .text(".")
                     .text((d) => d.term);
     });
 
