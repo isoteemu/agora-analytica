@@ -57,27 +57,57 @@ class Yle2019E(DataSetInstance):
         ("Lappi. Lappiin ei saa avata yhtään uutta kaivosta ennen kuin yhtiöiltä aletaan periä kaivosveroa.", "Lappi. Jäämeren rata pitää rakentaa.", ("vaalipiiri", "Lapin vaalipiiri")),
     ]
 
+    _text_space = [
+        ("Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.1", "On oikein nähdä vaivaa sen eteen, ettei vahingossakaan loukkaa toista.1"),
+        ("Mitkä ovat kolme vaalilupaustasi? Vaalilupaus 1:", "Mitkä ovat kolme vaalilupaustasi? Vaalilupaus 3:"),
+        ("Miksi juuri sinut pitäisi valita eduskuntaan?","Mitä pelkäät? (Yle Kioskin vaalikonetta varten.)"),
+        ("Uusimaa. Kaatolupia on myönnettävä nykyistä enemmän susikannan rajoittamiseksi.1","Uusimaa. Metro tulee jatkaa Helsingistä Sipooseen.1"),
+        ("Helsinki. Kun Helsinki sulkee hiilivoimaloita, voidaan korvaavaa energiaa tuottaa ydinvoimalla.1","Helsinki. Metro tulee jatkaa Helsingistä Sipooseen.1"),
+        ("Varsinais-Suomi. Kaatolupia on myönnettävä nykyistä enemmän susi-, merimetso- ja hyljekantojen rajoittamiseksi.1","Varsinais-Suomi. Saariston yhteysalusliikenteen jatkuvuuden turvaamiseksi liikenteen tulisi olla maksullista kesäasukkaille ja matkailijoille.1"),
+        ("Satakunta. Satakuntaan tulisi rakentaa runsaasti lisää tuulivoimaloita.1","Satakunta. Porin lentokentän henkilöliikenteen tukeminen olisi rahan haaskausta.1"),
+        ("Ahvenanmaa. llmastonmuutoksen hillitsemiseen tähtäävät toimet eivät saa vaikeuttaa Ahvenanmaan talouskasvua.1","Ahvenanmaa. Ahvenanmaan demilitarisointi tulisi ottaa uudelleen pohdintaan Itämerellä kasvaneen sotilaallisen aktiivisuuden vuoksi.1"),
+        ("Häme. Hämeeseen ei saa avata yhtään uutta kaivosta ennen kuin yhtiöiltä aletaan periä kaivosveroa.1","Häme. Tietulleja voidaan kerätä Hämeen teiden kunnossapidon parantamiseksi.1"),
+        ("Pirkanmaa. Tampereen ei pidä enää antaa täyttää järvien rantoja rakentamista varten.1","Pirkanmaa. Helsinki-Tampere-junayhteyttä on parannettava niin, että juna kulkee kaupunkien välin vain tunnissa.1"),
+        ("Kaakkois-Suomi. Saimaan luontoarvoista voidaan tinkiä, jotta kaivosteollisuuteen syntyisi uusia työpaikkoja.1","Kaakkois-Suomi. Parikkalan rajanylityspaikka tulee avata kansainväliselle liikenteelle.1"),
+        ("Savo-Karjala. Jos koululaisen koulumatkan pituus on yli tunnin suuntaansa, on yhtenä päivänä viikossa oltava mahdollisuus etäkoulunkäyntiin.1","Savo-Karjala. Raitiotieliikenne on realistinen tapa parantaa julkista liikennettä Itä-Suomessa.1"),
+        ("Vaasa. Kaatolupia on myönnettävä nykyistä enemmän susi-, merimetso- ja hyljekantojen rajoittamiseksi.1","Vaasa. Maahanmuuttoa pitää lisätä, jotta maakuntien reunakunnissakin riittäisi asukkaita ja työvoimaa.1"),
+        ("Keski-Suomi. Jyväskylän kaupunginteatterin ja museoiden kunnostamiseen on seuraavalla hallituskaudella ohjattava merkittäviä valtionavustuksia.1","Keski-Suomi. Jyväskylän on saatava nykyistä enemmän valtiontukea joukkoliikenteensä järjestämiseen.1"),
+        ("Oulun vaalipiiri. Valtion pitää vähentää selvästi omistusosuuttaan Sotkamon Talvivaarassa kaivostoimintaa harjoittavasta Terrafame-yhtiöstä.1","Oulun vaalipiiri. Oulusta on tällä vuosikymmenellä tullut entistä turvattomampi paikka elää.1"),
+        ("Lappi. Lappiin ei saa avata yhtään uutta kaivosta ennen kuin yhtiöiltä aletaan periä kaivosveroa.1","Lappi. Jäämeren rata pitää rakentaa.1"),
+    ]
 
-    def linear_answers(self) -> pd.DataFrame:
-        answers = pd.DataFrame(index=self.index, columns=[])
+    def linear_answers(self):
+        df = self.copy()._convert_linear_into_int()._collect_columns(self._linear_space)
+
+        return df
+
+    def text_answers(self):
+        df = self._collect_columns(self._text_space)
+        df.replace(np.nan, "", inplace=True)
+        return df
+
+    def _collect_columns(self, columns):
+        answers = Yle2019E(index=self.index, columns=[])
 
         # Collect suitable columns, based of filtering rules.
-        for cols in self._linear_space:
+        for cols in columns:
             matrix = self.loc[:, cols[0]:cols[1]]
             answers = answers.join(matrix)
 
         return answers
 
+    def _convert_linear_into_int(self):
+        """ Converts linear values into :type:`np.int`
 
-    def _convert_linear_into_int(self) -> pd.DataFrame:
-        """ Converts linear values into :type:`np.int` """
+        Responsible for converting correct, but skipped, "vaalipiiri" answers into an int `3`.
+        """
 
         for cols in self._linear_space:
             if len(cols) == 3:
                 f, t, i = cols
 
                 matrix = self.loc[self[i[0]] == i[1], f:t]
-                self.loc[df[i[0]] == i[1], f:t] = matrix.fillna(np.int(3)).astype('int')
+                self.loc[self[i[0]] == i[1], f:t] = matrix.fillna(np.int(3)).astype('int')
             else:
                 f, t = cols
                 matrix = self.loc[:, f:t].fillna(np.int(3)).astype('int')

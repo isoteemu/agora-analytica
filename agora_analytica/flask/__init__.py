@@ -18,7 +18,7 @@ def setup_app(name=__name__, **kwargs) -> Flask:
     :param DATABASE:
     """
 
-    app = Flask(name, instance_relative_config=True)
+    app = Flask(name, instance_path=kwargs.get("instance_path", None), instance_relative_config=True)
 
     kwargs.setdefault("CHARSET", "utf-8")
     kwargs.setdefault("DEBUG", False)
@@ -52,7 +52,6 @@ def setup_app(name=__name__, **kwargs) -> Flask:
     logger.addHandler(default_handler)
 
     return app
-
 
 if __name__ == "agora_analytica.flask":
 

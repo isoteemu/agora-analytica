@@ -10,21 +10,21 @@ from .. import instance_path
 from . import DataSetInstance
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
 class ZefDataFrame(DataSetInstance):
     _linear_space = []
     _multiselect_space = []
-
+    _text_space = []
 
     def linear_answers(self) -> pd.DataFrame:
         return self._get_answers(self._linear_space)
 
-
     def multiselect_answers(self) -> pd.DataFrame:
         return self._get_answers(self._multiselect_space)
 
+    def text_answers(self) -> pd.DataFrame:
+        return self._get_answers(self._text_space)
 
     def _get_answers(self, cols: List) -> pd.DataFrame:
         answers = pd.DataFrame(index=self.index, columns=[])
@@ -35,7 +35,7 @@ class ZefDataFrame(DataSetInstance):
         return answers
 
 
-def load_dataset(path = instance_path(), questions_file = "questions-6435463884701696.json", answers_file = "results-6668674686517248.json"):
+def load_dataset(path=instance_path(), questions_file="questions-6435463884701696.json", answers_file="results-6668674686517248.json"):
     with open(path / questions_file) as f:
         questions = json.load(f)
 
@@ -62,6 +62,7 @@ def load_dataset(path = instance_path(), questions_file = "questions-64354638847
         q_type = q['type']
         if q_type == "question-free-text":
             d_type = str
+            df._text_space.append(col)
         elif q_type == "question-1d-diagram":
             d_type = np.int
             df._linear_space.append(col)

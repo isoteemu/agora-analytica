@@ -1,4 +1,4 @@
-from os import getcwd
+import os
 
 from pathlib import Path
 
@@ -7,6 +7,10 @@ def instance_path() -> Path:
     """
         Return instance path.
     """
-    path = Path.cwd() / "instance"
 
-    return path
+    default = Path.cwd() / "instance"
+    _path = os.environ.get("INSTANCE_PATH", default)
+
+    path = Path(_path)
+
+    return path.resolve()
