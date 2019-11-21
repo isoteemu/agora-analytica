@@ -3,6 +3,8 @@
 import logging
 import os.path
 import importlib
+from pathlib import Path
+from zipfile import ZipFile
 
 from agora_analytica import (
     instance_path
@@ -12,19 +14,17 @@ from agora_analytica.analytics import measure_distances
 from agora_analytica.analytics.text import TextTopics
 from agora_analytica.data.interpolation.wikidata import finnish_parties
 
-
 import numpy as np
 
 import click
-
 from flask.json import dumps as jsonify
-#from flask.cli import with_appcontext
-#from flask import url_for
+
+import urllib.request
+
+logger = logging.getLogger(__name__)
 
 debug = False
 number_topics = 30
-
-logger = logging.getLogger(__name__)
 
 
 def _write(file, data, target=instance_path()):
@@ -39,6 +39,27 @@ def _write(file, data, target=instance_path()):
 def cli(debug):
     globals()['debug'] = debug
     logging.basicConfig(level=(logging.DEBUG if debug else logging.INFO))
+
+
+@cli.command()
+@click.option("--target", type=click.Path(file_okay=False),
+                          default=Path.cwd(),
+                          show_default=True)
+@click.option("--url", default=os.environ.get("INSTANCE_URL", None),
+                       show_default=True)
+def deploy(target, url, force=False):
+    if url is None:
+        raise click.BadParameter("Please set instance asset url in INSTANCE_URL enviroment variable")
+
+    if instance_path().exists() and not force:
+        logger.info("Skipping deployment; Instance folder exists")
+        return
+
+    logger.debug("Retrieving instance folder from %s", url)
+    local_filename, headers = urllib.request.urlretrieve(url)
+    print(local_filename, headers)
+    with ZipFile(local_filename) as instance_zip:
+        instance_zip.extractall(target)
 
 @cli.command()
 @click.option("--target", type=click.Path(file_okay=False),
