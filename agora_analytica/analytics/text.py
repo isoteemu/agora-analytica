@@ -13,13 +13,12 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation as LDA
 
 from itertools import chain
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import logging
 
 from cachetools import cached
 
 logger = logging.getLogger(__name__)
-
 
 class VoikkoTokenizer():
 
@@ -68,7 +67,7 @@ class VoikkoTokenizer():
             if stemmed_word is not None:
                 return [stemmed_word]
 
-            analysis = self.voikko.analyze(word)
+            analysis = self.analyze(word)
 
             if not analysis:
                 # If analyze didn't produce results, try spellcheking
@@ -107,39 +106,69 @@ class VoikkoTokenizer():
 
         return r
 
+    @cached({})
+    def analyze(self, word: str) -> List[Dict]:
+        """ Analyze word, returning morhpological data """
+        return self.voikko.analyze(word)
 
-__tokenizer = VoikkoTokenizer()
+    def __getstate__(self):
+        """ Return pickleable attributes.
+        
+        :class:`Voikko` can't be serialized, so remove it.
+        """
 
-def tokenizer(word):
-    return __tokenizer.tokenize(word)
+        state = self.__dict__.copy()
+        state['voikko_lang'] = self.voikko.listDicts()[0].language
+        del state['voikko']
+        return state
+
+    def __setstate__(self, state):
+        state['voikko'] = Voikko(state['voikko_lang'])
+        del state['voikko_lang']
+        self.__dict__.update(state)
+
 
 class TextTopics():
+    """
+    Text classifier.
+    """
     def __init__(self,
                  df: pd.DataFrame,
                  number_topics=50,
-                 instance_path=instance_path()):
+                 instance_path=instance_path(),
+                 **kwargs):
         self._instance_path = instance_path
         self.number_topics = number_topics
         self.stop_words: List = get_stop_words("fi")
         self._count_vector: CountVectorizer = None
         self._lda: LDA = None
-        self.init(df)
+        self._tokenizer = VoikkoTokenizer("fi")
 
-    def init(self, df):
+        self.init(df, kwargs)
+
+    def init(self, df: pd.DataFrame, generate_visualization=False, lang="fi"):
+        """
+        :param df: :class:`~pandas.Dataframe` containing text colums
+        :param generate_visualization: Generate visalization of LDA results. Slows down
+                                       generation notably.
+        :param lang: Language for :class:`~Voikko`
+        """
         if self._count_vector and self._lda:
             return True
-        f_words = self.instance_path() / "word.dat"
-        f_lda = self.instance_path() / "lda.dat"
+
+        file_words = self.instance_path() / "word.dat"
+        file_lda = self.instance_path() / "lda.dat"
+        file_ldavis = self.instance_path() / "ldavis.html"
 
         try:
-            self._count_vector = joblib.load(f_words)
-            self._lda = joblib.load(f_lda)
+            self._count_vector = joblib.load(file_words)
+            self._lda = joblib.load(file_lda)
         except FileNotFoundError:
             texts = [x for x in df.to_numpy().flatten() if x is not np.NaN]
 
             # Setup word count vector
             self._count_vector = CountVectorizer(
-                tokenizer=tokenizer,
+                tokenizer=self._tokenizer.tokenize,
                 stop_words=self.stop_words
             )
             count_data = self._count_vector.fit_transform(texts)
@@ -147,22 +176,34 @@ class TextTopics():
             self._lda = LDA(n_components=self.number_topics, n_jobs=-1)
             self._lda.fit(count_data)
 
-            joblib.dump(self._count_vector, f_words)
-            joblib.dump(self._lda, f_lda)
+            joblib.dump(self._count_vector, file_words)
+            joblib.dump(self._lda, file_lda)
+
+            if generate_visualization:
+                logger.debug("Generating LDA visualization. This might take a while")
+                from pyLDAvis import sklearn as sklearn_lda
+                import pyLDAvis
+
+                LDAvis_prepared = sklearn_lda.prepare(self._lda, count_data, self._count_vector)
+                pyLDAvis.save_html(LDAvis_prepared, str(file_ldavis))
 
     def instance_path(self):
         path = self._instance_path / "lda" / str(self.number_topics)
         path.mkdir(exist_ok=True, parents=True)
         return path
 
-    def compare_series(self, source, target):
-
+    def compare_series(self, source: pd.Series, target: pd.Series) -> Tuple[Tuple[str, int], Tuple[str, int]]:
+        """
+        Compare two text sets
+        """
         # Convert them into tuples, so they can be cached.
         _source = tuple(source.dropna())
         _target = tuple(target.dropna())
+
         source_topics = self._get_topics(_source)
         target_topics = self._get_topics(_target)
 
+        # Calculate biggest differences between topics.
         diffs = source_topics - target_topics
 
         topic_max = np.argmax(diffs)
@@ -180,26 +221,46 @@ class TextTopics():
 
     @cached({})
     def find_topic_word(self, text: List, topic_id):
-        source = pd.Series(tokenizer("\n\n".join(text))).value_counts()
+        source = pd.Series(self._tokenizer.tokenize("\n\n".join(text))).value_counts()
 
         words = pd.Series(self.topic_words(topic_id))
-        counts = source * words
+        # Lower weights of own words, preferring topic words.
+        counts = source.map(np.log) * words
 
-        return "%s (%d)" % (counts.sort_values(ascending=False).axes[0][0], topic_id)
+        # Debugging output
+        cdf = pd.DataFrame([counts.sort_values(ascending=False).head(10)])
+        logger.debug(cdf.append(source.map(np.log), ignore_index=True).append(words, ignore_index=True).iloc[:, 0:9])
+        
+        for word, c in counts.sort_values(ascending=False).iteritems():
+            if self._suitable_topic_word(word):
+                return word
 
-
+        raise RuntimeError("Could not find suitable topic word.")
 
     @cached({})
-    def topic_words(self, id: int) -> Dict[int, str]:
+    def topic_words(self, id: int) -> Dict[str, int]:
+        """ Words used in topic, sorted from most to least used. """
         words = self.vector_words()
         topic_words = self._lda.components_[id].argsort()[::-1]
 
-        return {words[i]: self._lda.components_[id][i] for i in topic_words}
+        # Generate word list for topic
+        r = {}
+        for wid in topic_words:
+            # Calculate relevancy for word
+            r[words[wid]] = self._lda.components_[id][wid] / sum([x[wid] for x in self._lda.components_])
+
+        return r
+
+    @cached({})
+    def _suitable_topic_word(self, word) -> bool:
+        """ Check if word can be used as topic word """
+
+        for morph in self._tokenizer.analyze(word):
+            if morph.get("CLASS") in ["nimi", "nimisana"]:
+                return True
+
+        return False
 
     @cached({})
     def vector_words(self) -> List:
         return self._count_vector.get_feature_names()
-
-
-def analyze_text(df: pd.DataFrame, topic_number=50):
-    pass
