@@ -31,26 +31,28 @@
 
     .nodes .node {
       transition: all 0.7s;
+      filter: grayscale(0) blur(0) drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
     }
 
     .nodes:hover .node {
-      filter: grayscale(100%) blur(1px);
+      filter: grayscale(100%) blur(1px) drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
 
     }
     .nodes:hover .node:hover {
-      filter:blur(0);
+      filter: grayscale(0) blur(0)  drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
     }
-
+    .nodes:hover .node.active {
+      filter:grayscale(50%) blur(0) drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
+    }
     .node .topic {
       transition: all 0.7s;
-      font-size:0.0em;
+      font-size:0.3em;
       opacity: 0;
     }
 
     .node:hover .topic {
-      font-size:0.3em;
       opacity:1;
-    }
+    } 
 
     .nodes .node-info {
       display: none;

@@ -45,15 +45,15 @@ function process_links(data) {
             // Add topics. Source and target are reversed, so links are on opposite sides.
             if (x_attr['source_term']) {
                 topics.push({
-                    source: trg,
-                    target: src,
+                    source: source,
+                    target: target,
                     term: x_attr['source_term']
                 });
             }
             if (x_attr['target_term']) {
                 topics.push({
-                    source: src,
-                    target: trg,
+                    source: target,
+                    target: source,
                     term: x_attr['target_term']
                 });
             }
@@ -201,10 +201,19 @@ function run() {
         node.selectAll("g.topic").attr("transform", function(d) {
             const atan = Math.atan2(nodes[d.source].y - nodes[d.target].y, nodes[d.source].x - nodes[d.target].x)
 
-            const s = this.getBBox();
+            const w = this.getBBox();
 
-            let y = Math.sin(atan) * (circleRadius + 5);
-            let x = Math.cos(atan) * (circleRadius + 5);
+            // Aling
+            const s = Math.sin(atan)
+            const c = Math.cos(atan)
+            let y = s * (circleRadius + 2)// + (w.height / 2 * s);
+            let x = c * (circleRadius + 2)// + (w.width / 2 * c); 
+            // Center point is bottom left, make it "center"
+            y -= w.height / 2;
+            x += w.width / 2;
+            // Push outside regarding box size
+            y += w.height / 2 * s;
+            x += w.width / 2 * c;
 
             return "translate("+ x * -1 +","+ y * -1 +")"
         });
