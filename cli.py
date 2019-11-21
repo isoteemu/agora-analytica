@@ -63,7 +63,7 @@ def download_dataset(target, dataset_name):
 @click.option("--method", type=click.Choice(['linear', 'dummy', 'multiselect']),
                           help="Distance approximation method.",
                           default="linear", multiple=True)
-@click.option("--dataset-name", default="jyy_ed_2019", show_default=True)
+@click.option("--dataset-name", default="yle_2019", show_default=True)
 @click.option("--limit", default=50)
 def build(target, method, dataset_name, limit: int = 50):
     """

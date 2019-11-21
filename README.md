@@ -34,4 +34,8 @@ For testing purposes "dummy" method and debug might be preferred:
 ## Starting local development webserver:
 ```bash
 (.venv) $ FLASK_ENV=development FLASK_APP=agora_analytica.flask:app flask run
+
+(PS) $env:FLASK_ENV = "development"
+     $env:FLASK_APP = "agora_analytica.flask:app"
+     flask run
 ```
