@@ -1,17 +1,17 @@
-requests==2.22.0
-click==7.0
-numpy==1.17.3
-pandas==0.25.3
-xlrd==1.2.0
-cachetools==3.1.1
-flask==1.1.1
-pytest==5.2
+requests>=2.22
+click>=7.0
+numpy>=1.17
+pandas>=0.25
+xlrd>=1.2.0
+cachetools>=3.1
+flask>=1.1
+pytest>=5.3
 
 qwikidata
 
 voikko==0.5
 stop-words
-pyLDAvis=2.1.2
-scikit-learn=0.21.3
+pyLDAvis>=2.1
+scikit-learn>=0.21
 
 gunicorn
