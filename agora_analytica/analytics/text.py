@@ -28,8 +28,9 @@ class VoikkoTokenizer():
         self.stem_map = {}
         self.voikko = Voikko(lang)
         self.regex_words = re.compile(r"""
-            (\w+-\w+|\w*)          # Get all word characters
-            |(?::[\w]*)      # ignore word characters after colon
+            (\w+-(?:\w+)+  # Get wordcharacters conjucated by dash (-)
+            |\w{1,}        # OR all word characters len() > 1
+            )|(?::[\w]*)   # ignore word characters after colon
         """, re.VERBOSE + re.MULTILINE)
         self.err_treshold = 0.5
 
@@ -64,10 +65,7 @@ class VoikkoTokenizer():
 
             # Check for previous stemming result
             stemmed_word = self.stem_map.get(word, None)
-            if stemmed_word is False:
-                err_count += 1
-                return [word.lower()]
-            elif stemmed_word is not None:
+            if stemmed_word is not None:
                 return [stemmed_word]
 
             analysis = self.voikko.analyze(word)
@@ -85,8 +83,6 @@ class VoikkoTokenizer():
                     if suggested is not None:
                         # return tokenized suggestion - It can be two or more words.
                         return self.tokenize_paragraph(suggested, use_suggestions=False)
-                    else:
-                        self.stem_map[word] = False
 
             for _word in analysis:
                 # Find first suitable iteration of word.
@@ -184,7 +180,7 @@ class TextTopics():
 
     @cached({})
     def find_topic_word(self, text: List, topic_id):
-        source = pd.Series(tokenizer("\n".join(text))).value_counts()
+        source = pd.Series(tokenizer("\n\n".join(text))).value_counts()
 
         words = pd.Series(self.topic_words(topic_id))
         counts = source * words
