@@ -17,7 +17,9 @@
   <link rel="stylesheet" href="{{url_for('static', filename='reset.css')}}">
 
     <style>
+
     #graph svg {
+        background: radial-gradient(circle, rgba(233,233,233,1) 0%, rgba(205,205,205,1) 83%, rgba(149,149,149,1) 100%);
         display: block;
     }
 
@@ -30,8 +32,27 @@
         stroke-width: 1.5px;
     }
 
+    .nodes .node {
+      transition: all 0.7s;
+    }
+
+    .nodes:hover .node {
+      filter: grayscale(100%) blur(1px);
+
+    }
+    .nodes:hover .node:hover {
+      filter:blur(0);
+    }
+
     .node .topic {
+      transition: all 0.7s;
+      font-size:0.0em;
+      opacity: 0;
+    }
+
+    .node:hover .topic {
       font-size:0.3em;
+      opacity:1;
     }
 
     .nodes .node-info {

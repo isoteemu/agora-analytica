@@ -42,18 +42,18 @@ function process_links(data) {
                 target: trg
             }, x_attr));
 
-            // Add topics.
+            // Add topics. Source and target are reversed, so links are on opposite sides.
             if (x_attr['source_term']) {
                 topics.push({
-                    source: src,
-                    target: trg,
+                    source: trg,
+                    target: src,
                     term: x_attr['source_term']
                 });
             }
             if (x_attr['target_term']) {
                 topics.push({
-                    source: trg,
-                    target: src,
+                    source: src,
+                    target: trg,
                     term: x_attr['target_term']
                 });
             }

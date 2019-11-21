@@ -26,6 +26,7 @@ number_topics = 30
 
 logger = logging.getLogger(__name__)
 
+
 def _write(file, data, target=instance_path()):
     """ Helper to write data into json file """
 
@@ -39,13 +40,12 @@ def cli(debug):
     globals()['debug'] = debug
     logging.basicConfig(level=(logging.DEBUG if debug else logging.INFO))
 
-
 @cli.command()
 @click.option("--target", type=click.Path(file_okay=False),
                           default=instance_path(),
                           show_default=True)
 @click.option("--dataset-name", default="yle_2019", show_default=True)
-def download(target, dataset_name):
+def download_dataset(target, dataset_name):
     """
     Download dataset
     """
@@ -65,7 +65,7 @@ def download(target, dataset_name):
                           default="linear", multiple=True)
 @click.option("--dataset-name", default="jyy_ed_2019", show_default=True)
 @click.option("--limit", default=50)
-def build(target, method, dataset_name, limit:int = 50):
+def build(target, method, dataset_name, limit: int = 50):
     """
     Build page.
 
@@ -90,7 +90,7 @@ def build(target, method, dataset_name, limit:int = 50):
 
     click.echo("Analyzing text ... ", nl=False)
     texts_df = df.text_answers().sort_index()
-    topics = TextTopics(texts_df, number_topics=number_topics)
+    topics = TextTopics(texts_df, number_topics=number_topics, generate_visualization=debug)
     words = {}
 
     with click.progressbar(texts_df.iterrows(), length=texts_df.shape[0]) as texts:
@@ -108,6 +108,7 @@ def build(target, method, dataset_name, limit:int = 50):
                     continue
 
                 r = topics.compare_series(x, y)
+
                 words[(i, l)] = r[0][1]
                 words[(l, i)] = r[1][1]
 
@@ -128,6 +129,7 @@ def build(target, method, dataset_name, limit:int = 50):
         "target_term": words.get((l, i), None),
         "target": int(l)
     } for i, d, l in distances.values]
+    click.echo("[DONE]")
 
     click.echo("Writing data ... ", nl=False)
     _write("nodes", data_nodes, target)
