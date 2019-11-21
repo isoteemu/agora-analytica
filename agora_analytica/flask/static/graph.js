@@ -143,19 +143,6 @@ function run() {
                     .text((d) => d.term);
     });
 
-    // var images = node.append("image")
-    //     .attr("x", -circleRadius)
-    //     .attr("y", -circleRadius)
-    //     .attr("width", circleRadius * 2)
-    //     .attr("height", circleRadius * 2)
-    //     .attr("xlink:href", function(d) {
-    //         if (d.image)
-    //             return d.image;
-    //         else   
-    //             return "{{url_for("static", filename="default-person.png")}}";
-    //     })
-    //     .attr("clip-path", "url(#clip-circle)")
-
     var circles = node.append("circle")
         .attr("r", circleRadius)
         .attr("stroke", node_color)
@@ -239,8 +226,6 @@ function run() {
     d3.select(window).on("resize", function() {
         width = parseInt(window.innerWidth);
         height = parseInt(window.innerHeight);
-
-        console.log("resize");
 
         svg.attr("width", width)
            .attr("height", height);

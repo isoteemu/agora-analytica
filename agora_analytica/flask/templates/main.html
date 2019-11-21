@@ -20,6 +20,12 @@
         display: block;
     }
 
+    #imperium text {
+        fill:#fff;
+        font-family:serif;
+        filter:drop-shadow( 0 0 5px rgba(0,0,0,0.692) );
+    }
+
     .links line {
         stroke: rgba(0, 0, 0, 0.692);
         stroke-opacity: 0.6;
@@ -106,8 +112,51 @@
     </nav>
 
     <div id="graph">
-        <svg></svg>
+        <svg>
+            <g id="imperium">
+                <text>AGORA ANALYTICA</text>
+                <line x1="-6em" y1="0" x2="6em" y2="0" stroke-width=1 stroke="white" />
+                <line x1="-6em" y1="0" x2="6em" y2="0" stroke-width=1 stroke="white" />
+            </g>
+        </svg>
     </div>
+<script>
+(function() {
+    {# Set graph size early #}
+    const width = parseInt(window.innerWidth),
+          height = parseInt(window.innerHeight);
+    let svg = document.querySelector("#graph svg");
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+
+    let g = svg.querySelector("#imperium");
+    let t = g.querySelector("text");
+    const w = t.getBBox();
+
+    const _w = w.width/2;
+    const _h = w.height/2;
+
+    t.setAttribute("x", -_w);
+    t.setAttribute("y", -_h);
+
+    let ls = g.getElementsByTagName("line");
+    for(e of ls) {
+        e.setAttribute("x1", -_w - _w/20);
+        e.setAttribute("x2", _w + _w/20);
+    }
+    ls[0].setAttribute("y1", -_h + _h/4);
+    ls[0].setAttribute("y2", -_h + _h/4);
+
+    ls[1].setAttribute("y1", -_h*2 - _h /3);
+    ls[1].setAttribute("y2", -_h*2 - _h /3);
+
+    const r = Math.min(width/w.width, height/w.height);
+
+    g.setAttribute("transform", "translate("+width/2+","+height/2+") scale("+r/3+")");
+    g.setAttribute("y", parseInt(height / 2))
+})();
+
+</script>
 
 <script src="https://d3js.org/d3.v4.js"></script>
 <script src="{{url_for('static', filename='graph.js')}}"></script>
