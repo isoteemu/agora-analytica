@@ -16,7 +16,7 @@ from itertools import chain
 from typing import List, Dict, Tuple
 import logging
 
-from cachetools import cached
+from cachetools import cached, LRUCache, LFUCache
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,13 @@ class VoikkoTokenizer():
         """, re.VERBOSE + re.MULTILINE)
         self.err_treshold = 0.5
 
+    @cached({})
     def tokenize(self, text: str) -> List[str]:
         """ Return list of words """
         # Split into paragraphs.
         paragraphs = text.splitlines()
         tokens = chain(*map(self.tokenize_paragraph, paragraphs))
+        
         return tokens
 
     def tokenize_paragraph(self, sentence, use_suggestions=True):
@@ -83,6 +85,9 @@ class VoikkoTokenizer():
                         # return tokenized suggestion - It can be two or more words.
                         return self.tokenize_paragraph(suggested, use_suggestions=False)
 
+            # Prefer nimisana over others
+            analysis = sorted(analysis, key=lambda x: -1 if x.get('CLASS') in ["nimisana"] else 0)
+
             for _word in analysis:
                 # Find first suitable iteration of word.
                 _class = _word.get("CLASS", None)
@@ -106,9 +111,12 @@ class VoikkoTokenizer():
 
         return r
 
-    @cached({})
+    @cached(LFUCache(maxsize=512))
     def analyze(self, word: str) -> List[Dict]:
-        """ Analyze word, returning morhpological data """
+        """ Analyze word, returning morhpological data.
+
+            Uses :class:`LFUCache` - least frequently used - cache.
+         """
         return self.voikko.analyze(word)
 
     def __getstate__(self):
@@ -142,6 +150,7 @@ class TextTopics():
         self.stop_words: List = get_stop_words("fi")
         self._count_vector: CountVectorizer = None
         self._lda: LDA = None
+        self.token_cache = {}
         self._tokenizer = VoikkoTokenizer("fi")
 
         self.init(df, kwargs)
@@ -161,9 +170,12 @@ class TextTopics():
         file_ldavis = self.instance_path() / "ldavis.html"
 
         try:
+            # Try loading saved lda files.
             self._count_vector = joblib.load(file_words)
             self._lda = joblib.load(file_lda)
-        except FileNotFoundError:
+        except FileNotFoundError as e:
+            logger.exception(e)
+
             texts = [x for x in df.to_numpy().flatten() if x is not np.NaN]
 
             # Setup word count vector
@@ -194,62 +206,68 @@ class TextTopics():
 
     def compare_series(self, source: pd.Series, target: pd.Series) -> Tuple[Tuple[str, int], Tuple[str, int]]:
         """
-        Compare two text sets
+        Compare two text sets.
+
+        First tuple contains topic word not found in :param:`target`, and second tuple
+        contains word not found in :param:`source`.
         """
         # Convert them into tuples, so they can be cached.
         _source = tuple(source.dropna())
         _target = tuple(target.dropna())
 
-        source_topics = self._get_topics(_source)
-        target_topics = self._get_topics(_target)
+        counts_data_source, topics_source = self._get_topics(_source)
+        counts_data_target, topics_target = self._get_topics(_target)
 
-        # Calculate biggest differences between topics.
-        diffs = source_topics - target_topics
+        diffs = topics_source - topics_target
 
         topic_max = np.argmax(diffs)
         topic_min = np.argmin(diffs)
 
-        source_topic = self.find_topic_word(_source, topic_max)
-        target_topic = self.find_topic_word(_target, topic_min)
+        source_words = self.suggest_topic_word(counts_data_source, counts_data_target, topic_max)
+        target_words = self.suggest_topic_word(counts_data_target, counts_data_source, topic_min)
 
-        return ((topic_max, source_topic), (topic_min, target_topic))
+        # Get first suitable word. There might be none, due to lack of notable texts.
+        word_for_source = source_words[0][0] if len(source_words) else None
+        word_for_target = target_words[0][0] if len(target_words) else None
 
-    @cached({})
-    def _get_topics(self, source):
-        source_count = self._count_vector.transform(source)
-        return self._lda.transform(source_count).mean(axis=0)
+        return ((topic_max, word_for_source), (topic_min, word_for_target))
 
-    @cached({})
-    def find_topic_word(self, text: List, topic_id):
-        source = pd.Series(self._tokenizer.tokenize("\n\n".join(text))).value_counts()
+    #@cached(LFUCache(maxsize=256))
+    def suggest_topic_word(self, A, B, topic_id: int) -> List[Tuple[str, float]]:
+        """ Find relevant word for topic.
 
-        words = pd.Series(self.topic_words(topic_id))
-        # Lower weights of own words, preferring topic words.
-        counts = source.map(np.log) * words
+        Copares :param:`A` and :param:`B` words, and topic words to find
+        suitable word with enough difference between `A` and `B`.
 
-        # Debugging output
-        cdf = pd.DataFrame([counts.sort_values(ascending=False).head(10)])
-        logger.debug(cdf.append(source.map(np.log), ignore_index=True).append(words, ignore_index=True).iloc[:, 0:9])
-        
-        for word, c in counts.sort_values(ascending=False).iteritems():
-            if self._suitable_topic_word(word):
-                return word
+        :param A: :class:`csr_matrix` Target to find word for.
+        :param B: :class:`csr_matrix` Comparative target for `A`
+        :param topic_id: lda topic id number.
 
-        raise RuntimeError("Could not find suitable topic word.")
+        :return: words in prominent order.
+        """
+        # Generate sum of used words
+        a_sum = A.toarray().sum(0)
+        b_sum = B.toarray().sum(0)
 
-    @cached({})
-    def topic_words(self, id: int) -> Dict[str, int]:
-        """ Words used in topic, sorted from most to least used. """
-        words = self.vector_words()
-        topic_words = self._lda.components_[id].argsort()[::-1]
+        # Topic word, prefering unique ones.
+        λ = self._lda.components_[topic_id] / self._lda.components_.sum(0)
 
-        # Generate word list for topic
-        r = {}
-        for wid in topic_words:
-            # Calculate relevancy for word
-            r[words[wid]] = self._lda.components_[id][wid] / sum([x[wid] for x in self._lda.components_])
+        # Remove words that A set that B has used.
+        complement = a_sum - b_sum
 
+        # Use logarithm, so topic words are prefered.
+        prominence = np.log(complement) * λ
+
+        # Generate list of words, ordered by prominence
+        vector_words = self.vector_words()
+
+        r = sorted([(vector_words[i], prominence[i]) for i in prominence.argsort() if prominence[i] > 0], key=lambda x: x[1], reverse=True)
         return r
+
+    @cached(LRUCache(512))
+    def _get_topics(self, source) -> Tuple:
+        count_data = self._count_vector.transform(source)
+        return (count_data, self._lda.transform(count_data).mean(axis=0))
 
     @cached({})
     def _suitable_topic_word(self, word) -> bool:
@@ -261,6 +279,5 @@ class TextTopics():
 
         return False
 
-    @cached({})
     def vector_words(self) -> List:
         return self._count_vector.get_feature_names()
