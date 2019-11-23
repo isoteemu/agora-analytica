@@ -62,7 +62,7 @@ class VoikkoTokenizer():
             nonlocal err_count
 
             # See: https://github.com/voikko/voikko-sklearn/blob/master/voikko_sklearn.py
-            FINNISH_STOPWORD_CLASSES = ["huudahdussana", "seikkasana", "lukusana", "asemosana", "sidesana", "suhdesana", "kieltosana"]
+            FINNISH_STOPWORD_CLASSES = ["huudahdussana", "seikkasana", "lukusana", "asemosana", "sidesana", "suhdesana"]
 
             # Check for previous stemming result
             stemmed_word = self.stem_map.get(word, None)
@@ -153,6 +153,8 @@ class TextTopics():
         self.token_cache = {}
         self._tokenizer = VoikkoTokenizer("fi")
 
+        self.stop_words += ["kk"]
+
         self.init(df, kwargs)
 
     def init(self, df: pd.DataFrame, generate_visualization=False, lang="fi"):
@@ -226,14 +228,13 @@ class TextTopics():
         source_words = self.suggest_topic_word(counts_data_source, counts_data_target, topic_max)
         target_words = self.suggest_topic_word(counts_data_target, counts_data_source, topic_min)
 
-        # Get first suitable word. There might be none, due to lack of notable texts.
-        word_for_source = source_words[0][0] if len(source_words) else None
-        word_for_target = target_words[0][0] if len(target_words) else None
+        word_for_source = self.suitable_topic_word(source_words) if len(source_words) else None
+        word_for_target = self.suitable_topic_word(source_words) if len(source_words) else None
 
         return ((topic_max, word_for_source), (topic_min, word_for_target))
 
     #@cached(LFUCache(maxsize=256))
-    def suggest_topic_word(self, A, B, topic_id: int) -> List[Tuple[str, float]]:
+    def suggest_topic_word(self, A, B, topic_id: int) -> List[Tuple[int, float]]:
         """ Find relevant word for topic.
 
         Copares :param:`A` and :param:`B` words, and topic words to find
@@ -243,7 +244,8 @@ class TextTopics():
         :param B: :class:`csr_matrix` Comparative target for `A`
         :param topic_id: lda topic id number.
 
-        :return: words in prominent order.
+        :return: List of tuples in prominen order.
+                 First instance in tuple is word vector feature number, and second is prominence value.
         """
         # Generate sum of used words
         a_sum = A.toarray().sum(0)
@@ -252,16 +254,15 @@ class TextTopics():
         # Topic word, prefering unique ones.
         λ = self._lda.components_[topic_id] / self._lda.components_.sum(0)
 
-        # Remove words that A set that B has used.
+        # Remove words from A that B has used too.
+        # Note: Doesn't actually remove.
         complement = a_sum - b_sum
 
         # Use logarithm, so topic words are prefered.
         prominence = np.log(complement) * λ
 
         # Generate list of words, ordered by prominence
-        vector_words = self.vector_words()
-
-        r = sorted([(vector_words[i], prominence[i]) for i in prominence.argsort() if prominence[i] > 0], key=lambda x: x[1], reverse=True)
+        r = sorted([(i, prominence[i]) for i in prominence.argsort() if prominence[i] != 0 > -np.inf], key=lambda x: x[1], reverse=True)
         return r
 
     @cached(LRUCache(512))
@@ -269,15 +270,55 @@ class TextTopics():
         count_data = self._count_vector.transform(source)
         return (count_data, self._lda.transform(count_data).mean(axis=0))
 
-    @cached({})
+    # sequence list is too volatile to be cached.
+    def suitable_topic_word(self, seq: List[List[int, ]]) -> str:
+        """
+        Find first suitable word from :param:`seq` list.
+
+        :param: 1d matrix of word feature indexes. Only first column in row
+                is interepted as feature number.
+        """
+        vector_words = self.vector_words()
+        """ Find first suitable word from word list """
+        for r in seq:
+            word = vector_words[r[0]]
+            if self._suitable_topic_word(word):
+                return word
+        return None
+
+    @cached(LFUCache(maxsize=512))
     def _suitable_topic_word(self, word) -> bool:
-        """ Check if word can be used as topic word """
+        """
+        Check if word can be used as topic word
+        
+        Accepted word classes:
+        :nimi:      Names; Words like `Linux` and `Microsoft`, `Kokoomus`
+        :nimisana:  Substantives; like `ihminen`, `maahanmuutto`, `koulutus`, `Kokoomus`
+        :laatusana: Adjectives; words like `maksuton`
+        :nimisana_laatusana: Adjectives, that are not "real", like `rohkea` or `liberaali`
+        :lyhenne:   Abbrevations; Words like `EU`
+        :paikannimi:Geographical locations, like `Helsinki`
+        :sukunimi:  Last names, like `Kekkonen`
+        """
 
         for morph in self._tokenizer.analyze(word):
-            if morph.get("CLASS") in ["nimi", "nimisana"]:
+            _class = morph.get("CLASS")
+            if _class in ["nimi", "nimisana", "laatusana", "nimisana_laatusana", "lyhenne", "paikannimi", "sukunimi"]:
                 return True
+            else:
+                logger.debug("Unsuitable word class %s for word %s", _class, word)
 
         return False
 
     def vector_words(self) -> List:
+        """ Feature names in CountVector """
         return self._count_vector.get_feature_names()
+
+
+if __name__ == "__main__":
+    import sys
+    from pprint import pprint 
+    v = VoikkoTokenizer()
+
+    tokens = v.tokenize(" ".join(sys.argv[1:]))
+    [pprint(sorted(v.analyze(t), key=lambda x: -1 if x.get('CLASS') in ["nimisana"] else 0)) for t in tokens]
