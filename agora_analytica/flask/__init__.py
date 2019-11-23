@@ -56,12 +56,16 @@ def setup_app(name=__name__, **kwargs) -> Flask:
 
 
 if __name__ == "agora_analytica.flask":
+    debug = False
+    if os.environ.get("DEBUG"):
+        debug = True
 
-    app = setup_app(__name__, instance_path=instance_path())
+    app = setup_app(__name__, instance_path=instance_path(), DEBUG=debug)
+    app.debug = debug
 
     @app.context_processor
     def inject_debug():
-        return dict(debug=app.debug)
+        return dict(debug=debug if debug else app.debug)
 
     from . import views
     views.app_init(app)
