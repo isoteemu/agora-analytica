@@ -89,10 +89,8 @@ def measure_distances(df: DataSetInstance, methods: List = ["linear", "multisele
                 # Calculate how many columns this distance is proportional to.
                 weight = questions_n * len(answers[method].columns)
                 distance += calc.distance(source, target, answers[method], **kwargs) / weight
-
-            _d = pd.Series([np.int(i), distance, np.int(l)], index=distances.columns, dtype='object')
+            _d = pd.Series([source.key, distance, target.key], index=distances.columns, dtype='object')
             distances = distances.append(_d, ignore_index=True)
-
     return distances
 
 
