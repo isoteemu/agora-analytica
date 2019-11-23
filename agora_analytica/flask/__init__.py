@@ -1,5 +1,6 @@
 from flask import Flask
 from flask.logging import default_handler
+from flask_babel import Babel, get_locale
 
 import os
 import logging
@@ -45,17 +46,23 @@ def setup_app(name=__name__, **kwargs) -> Flask:
             with open(key_file, 'wb') as fd:
                 fd.write(app.config['SECRET_KEY'])
 
-    #Babel(app)
-    #app.jinja_env.globals.update(get_locale=get_locale)
+    Babel(app)
+    app.jinja_env.globals.update(get_locale=get_locale)
 
     logger = logging.getLogger(name)
     logger.addHandler(default_handler)
 
     return app
 
+
 if __name__ == "agora_analytica.flask":
 
     app = setup_app(__name__, instance_path=instance_path())
 
+    @app.context_processor
+    def inject_debug():
+        return dict(debug=app.debug)
+
     from . import views
     views.app_init(app)
+

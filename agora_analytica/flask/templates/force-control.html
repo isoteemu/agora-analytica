@@ -1,0 +1,53 @@
+{# Most of thease are copied from: https://bl.ocks.org/steveharoz/8c3e2524079a8c440df60c1ab72b5d03 #}
+<style>
+.controls {
+    position: absolute;
+    display: block;
+}
+
+
+.controls .force label { display: inline-block; }
+.controls input[type="checkbox"] { transform: scale(1.2, 1.2); }
+.controls input[type="range"] { margin: 0 5% 0.5em 5%; width: 100%; }
+
+.controls .alpha .alpha_bar { height: .5em; border: 1px #777 solid; border-radius: 2px; padding: 1px; display: flex; }
+.controls .alpha .alpha_bar #alpha_value { background-color: #555; border-radius: 1px; flex-basis: 100% }
+.controls .alpha .alpha_bar:active #alpha_value { background-color: #222 }
+
+</style>
+
+<div class="controls">
+    <fieldset>
+        <legend>Graph</legend>
+        <form class="force alpha">
+            <label>{{_("Simulation activity")}}</label>
+            <div class="alpha_bar" onclick="graph.reset();"><div id="alpha_value"></div></div>
+        </form>
+        <form onchange="output.value=parseInt(graph.strength)">
+            <label>{{_("Charge")}}:
+            <output name="output"></output>
+            <input type="range" name="input" min="-200" max="-1" onchange="graph.strength=this.value;graph.reset();">
+            </label>
+        </form>
+        <form onchange="output.value=parseInt(graph.distance)">
+            <label>{{_("Distance")}}:
+            <output name="output"></output>
+            <input type="range" name="input" min="1" max="400" onchange="graph.distance=this.value;graph.reset();">
+            </label>
+        </form>
+        <form onchange="output.value=parseInt(graph.node_radius)">
+            <label>{{_("Node Radius")}}:
+            <output name="output"></output>
+            <input type="range" name="input" min="1" max="100" onchange="graph.node_radius=this.value;graph.reset();">
+            </label>
+        </form>
+    </fieldset>
+</div>
+<script>
+    window.addEventListener("load", function() {
+        graph.simulation.on("tick.control", function(e) {
+            d3.select('#alpha_value').style('flex-basis', (graph.simulation.alpha()*100) + '%');
+        });
+
+    });
+</script>

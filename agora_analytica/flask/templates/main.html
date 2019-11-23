@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html lang="en">
+<html lang="{{get_locale()}}">
 
 <head>
     <meta charset="utf-8">
@@ -26,13 +26,17 @@
         filter:drop-shadow( 0 0 5px rgba(0,0,0,0.692) );
     }
 
+    #graph image {
+        image-rendering:optimizeSpeed;
+    }
+
     .links line {
-        stroke: rgba(0, 0, 0, 0.692);
-        stroke-opacity: 0.6;
+        stroke: rgba(115, 115, 115, 1);
+        {# stroke-opacity: 0.6; #}
     }
 
     .nodes circle {
-        stroke-width: 1.5px;
+        stroke-width: 5px;
     }
 
     .nodes .node {
@@ -77,7 +81,6 @@
 </head>
 
 <body>
-
     <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
         <a class=" navbar-brand" href="#">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" style="width:100px;">
@@ -111,6 +114,9 @@
         </div>
     </nav>
 
+    {% if debug %}
+        {% include 'force-control.html' %}
+    {% endif %}
     <div id="graph">
         <svg>
             <g id="imperium">
@@ -170,13 +176,13 @@ var default_image = {{url_for("static", filename="default-person.png")|tojson|sa
 
 d3.json('{{url_for(".data_parties")}}', function(data) {
     parties = data;
-    run();
+    graph_run();
 });
 d3.json('{{url_for(".data_nodes")}}', function(data) {
     nodes = data;
-    run();
+    graph_run();
 });
-d3.json('{{url_for(".data_links")}}', function(data) { process_links(data); run(); });
+d3.json('{{url_for(".data_links")}}', function(data) { process_links(data); graph_run(); });
     </script>
 
     <footer class="page-footer bg-dark text-white">
