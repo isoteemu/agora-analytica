@@ -60,7 +60,7 @@ def download_dataset(target, dataset_name):
 @click.option("--target", type=click.Path(file_okay=False),
                           default=instance_path(),
                           show_default=True)
-@click.option("--method", type=click.Choice(['linear', 'dummy', 'multiselect']),
+@click.option("--method", type=click.Choice(['linear', 'dummy',  'multiselect']),
                           help="Distance approximation method.",
                           default="linear", multiple=True)
 @click.option("--dataset-name", default="yle_2019", show_default=True)
@@ -81,7 +81,7 @@ def build(target, method, dataset_name, limit: int = 50):
 
     if limit < 2:
         raise click.BadParameter("Build should include more than 2 candidates.", param_hint="--limit")
-    df = df.head(limit)
+    df = df.sample(min(limit, df.shape[0]))
     click.echo("[DONE]")
 
     click.echo("Calculating distances ... ", nl=False)
@@ -93,14 +93,17 @@ def build(target, method, dataset_name, limit: int = 50):
     topics = TextTopics(texts_df, number_topics=number_topics, generate_visualization=debug)
     words = {}
 
-    with click.progressbar(texts_df.iterrows(), length=texts_df.shape[0]) as texts:
+    n = texts_df.shape[0]
+    with click.progressbar(length=n * n) as bar:
+        for i, x in texts_df.iterrows():
 
-        for i, x in texts:
             x = x.dropna()
             if len(x) == 0:
+                bar.update(n)
                 continue
 
             for l, y in texts_df.iterrows():
+                bar.update(1)
                 if l <= i:
                     continue
                 y = y.dropna()
@@ -116,18 +119,18 @@ def build(target, method, dataset_name, limit: int = 50):
 
     click.echo("Generating structures ... ", nl=False)
     data_nodes = [{
-        "index": idx,
+        "id": idx,
         "name": row.get("name"),
         "party": row.get("party"),
         "image": row.get("image", None),
     } for idx, row in df.iterrows()]
 
     data_links = [{
-        "source": int(i),
+        "source": i,
         "source_term": words.get((i, l), None),
         "distance": float(d),
         "target_term": words.get((l, i), None),
-        "target": int(l)
+        "target": l
     } for i, d, l in distances.values]
     click.echo("[DONE]")
 
