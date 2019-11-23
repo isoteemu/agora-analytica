@@ -64,6 +64,7 @@ def measure_distances(df: DataSetInstance, methods: List = ["linear", "multisele
     # `source` and `target` are pointers to dataframe indexes. 
     # `distance` indicates calculated distance value between `source` and
     # `target`.
+
     distances = pd.DataFrame({
         "source": pd.Series(dtype='int64'),
         "distance": pd.Series(dtype='float'),
@@ -89,8 +90,15 @@ def measure_distances(df: DataSetInstance, methods: List = ["linear", "multisele
                 # Calculate how many columns this distance is proportional to.
                 weight = questions_n * len(answers[method].columns)
                 distance += calc.distance(source, target, answers[method], **kwargs) / weight
-            _d = pd.Series([source.key, distance, target.key], index=distances.columns, dtype='object')
+            _d = pd.Series([df.index[i], distance, df.index[l]], index=distances.columns, dtype='object')
             distances = distances.append(_d, ignore_index=True)
+
+    # Normalize distances to 0-1 range.
+    df_slice = distances.loc[:, "distance"]
+    dist_min = df_slice.min()
+    dist_diff = df_slice.max() - dist_min
+    distances["distance"] = (df_slice - dist_min) / dist_diff
+
     return distances
 
 
