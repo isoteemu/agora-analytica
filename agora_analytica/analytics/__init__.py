@@ -24,7 +24,8 @@ ACCEPTED_TYPES = {
 
 logger = logging.getLogger(__name__)
 
-def measure_distances(df: DataSetInstance, methods: List=["linear", "multiselect"], **kwargs) -> pd.DataFrame:
+
+def measure_distances(df: DataSetInstance, methods: List = ["linear", "multiselect"], **kwargs) -> pd.DataFrame:
     """
     Measure distance between candidates.
 
@@ -75,8 +76,8 @@ def measure_distances(df: DataSetInstance, methods: List=["linear", "multiselect
         # processed multiple times.
         offset = i + 1
         for l in range(offset, df.shape[0]):
-            source = df.loc[i]
-            target = df.loc[l]
+            source = df.iloc[i]
+            target = df.iloc[l]
 
             # Loop through all requested calculation methods, and calculate
             # distance
