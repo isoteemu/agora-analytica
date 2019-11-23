@@ -2,45 +2,73 @@
 <style>
 .controls {
     position: absolute;
-    display: block;
+    font-family: sans-serif; font-size: 75%;
+    flex-basis: 200px;
 }
-
-
-.controls .force label { display: inline-block; }
+.controls fieldset {
+  transition: background-color, opacity 0.7s;
+  border-radius: 3px;
+  padding: 5px;
+  margin: 5px 0;
+  opacity: 0.6;
+}
+.controls:hover fieldset {
+    background-color:#eee;
+    opacity: 1;
+}
+.controls p label { margin-right: .5em; font-size: 120%; font-weight: bold;}
+.controls label { display: inline-block; margin: 0; }
 .controls input[type="checkbox"] { transform: scale(1.2, 1.2); }
 .controls input[type="range"] { margin: 0 5% 0.5em 5%; width: 100%; }
-
+.controls .alpha p { margin-bottom: .25em; }
 .controls .alpha .alpha_bar { height: .5em; border: 1px #777 solid; border-radius: 2px; padding: 1px; display: flex; }
 .controls .alpha .alpha_bar #alpha_value { background-color: #555; border-radius: 1px; flex-basis: 100% }
 .controls .alpha .alpha_bar:active #alpha_value { background-color: #222 }
 
+.show-topics .nodes .node .topic {
+    display: inline !important;
+}
 </style>
 
 <div class="controls">
+    <h3>Debug</h3>
     <fieldset>
-        <legend>Graph</legend>
-        <form class="force alpha">
-            <label>{{_("Simulation activity")}}</label>
+        <legend>Simulation</legend>
+        <form class="alpha">
+            <p><label>alpha</label>{{_("Simulation activity")}}</p>
             <div class="alpha_bar" onclick="graph.reset();"><div id="alpha_value"></div></div>
+            <p><label><input type="checkbox" checked onchange="graph.decay = this.checked; graph.reset()">{{_("Decay")}}</label>Stabilitze simulation</p>
         </form>
+    </fieldset>
+    <fieldset>
+        <legend>Forces</legend>
         <form onchange="output.value=parseInt(graph.strength)">
-            <label>{{_("Charge")}}:
-            <output name="output"></output>
+            <label title="Node attraction force">{{_("Gravity")}}: <output name="output">-30</output>
             <input type="range" name="input" min="-200" max="-1" onchange="graph.strength=this.value;graph.reset();">
             </label>
+            <p><label><input type="checkbox" onchange="graph.collide = this.checked; graph.reset()">{{_("Collide")}}</label>Prevent nodes from overlapping.</p>
         </form>
         <form onchange="output.value=parseInt(graph.distance)">
-            <label>{{_("Distance")}}:
-            <output name="output"></output>
+            <label title="Link distance multiplier">{{_("Distance")}}: <output name="output">30</output></label>
             <input type="range" name="input" min="1" max="400" onchange="graph.distance=this.value;graph.reset();">
-            </label>
+            <p><label><input type="checkbox" checked onchange="graph.distance_adaptive = this.checked; graph.reset()">{{_("Adaptive")}}</label>Scale distances relative to node count</p>
         </form>
+    </fieldset>
+    <fieldset>
+        <legend>Visual</legend>
         <form onchange="output.value=parseInt(graph.node_radius)">
-            <label>{{_("Node Radius")}}:
+            <label>{{_("Node size")}}:
             <output name="output"></output>
             <input type="range" name="input" min="1" max="100" onchange="graph.node_radius=this.value;graph.reset();">
             </label>
         </form>
+        <form>
+            <p><label><input type="checkbox" onchange="d3.select('#graph').classed('show-topics',  this.checked);">{{_("Topics")}}</label>Show link topics</p>
+        </form>
+    </fieldset>
+    <fieldset>
+        <legend>Extra</legend>
+        <a href="{{url_for('.show_lda')}}">LDA</a>
     </fieldset>
 </div>
 <script>

@@ -48,33 +48,34 @@
       filter: grayscale(100%) blur(1px) drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
 
     }
-    .nodes:hover .node:hover {
+    .nodes:hover .node.hover {
       filter: grayscale(0) blur(0)  drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
     }
     .nodes:hover .node.active {
       filter:grayscale(50%) blur(0) drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
     }
     .node .topic {
-      transition: all 0.7s;
+      transition: opacity 0.7s;
       font-size:0.3em;
-      opacity: 0;
+      fill:#fff;
+      filter:drop-shadow( 0 0 0.05em rgb(0, 0, 0) );
+      /* display:none makes things a bit harder, but performance difference 
+         between visibility and display is quite noticable. */
+      display:none;
+      {# opacity: 0; #}
     }
 
-    .node:hover .topic {
+    .node.hover .topic {
       opacity:1;
-    } 
+      display: inline;
+    }
 
     .nodes .node-info {
       display: none;
-      z-index: 1000;
-    }
-    .nodes .active .node-info {
-      display: block;
     }
 
-
     .nodes .active .node-info {
-      display: block;
+      display: inline;
     }
     </style>
 
@@ -167,22 +168,25 @@
 <script src="https://d3js.org/d3.v4.js"></script>
 <script src="{{url_for('static', filename='graph.js')}}"></script>
 <script>
-var nodes = [],
-    links = [],
-    topics = [],
-    parties = [];
+var parties = [];
 
 var default_image = {{url_for("static", filename="default-person.png")|tojson|safe}}
 
-d3.json('{{url_for(".data_parties")}}', function(data) {
+d3.json('{{url_for(".data_parties")}}', function(err, data) {
+    if (err) throw err;
     parties = data;
     graph_run();
 });
-d3.json('{{url_for(".data_nodes")}}', function(data) {
-    nodes = data;
+d3.json('{{url_for(".data_nodes")}}', function(err, data) {
+    if (err) throw err;
+    process_nodes(data)
     graph_run();
 });
-d3.json('{{url_for(".data_links")}}', function(data) { process_links(data); graph_run(); });
+d3.json('{{url_for(".data_links")}}', function(err, data) {
+    if (err) throw err;
+    process_links(data);
+    graph_run();
+});
     </script>
 
     <footer class="page-footer bg-dark text-white">
