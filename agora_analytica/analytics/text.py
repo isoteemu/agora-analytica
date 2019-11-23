@@ -229,7 +229,7 @@ class TextTopics():
         target_words = self.suggest_topic_word(counts_data_target, counts_data_source, topic_min)
 
         word_for_source = self.suitable_topic_word(source_words) if len(source_words) else None
-        word_for_target = self.suitable_topic_word(source_words) if len(source_words) else None
+        word_for_target = self.suitable_topic_word(target_words) if len(target_words) else None
 
         return ((topic_max, word_for_source), (topic_min, word_for_target))
 
@@ -267,6 +267,7 @@ class TextTopics():
 
     @cached(LRUCache(512))
     def _get_topics(self, source) -> Tuple:
+
         count_data = self._count_vector.transform(source)
         return (count_data, self._lda.transform(count_data).mean(axis=0))
 
@@ -303,7 +304,7 @@ class TextTopics():
 
         for morph in self._tokenizer.analyze(word):
             _class = morph.get("CLASS")
-            if _class in ["nimi", "nimisana", "laatusana", "nimisana_laatusana", "lyhenne", "paikannimi", "sukunimi"]:
+            if _class in ["nimi", "nimisana", "nimisana_laatusana", "lyhenne", "paikannimi", "sukunimi"]:
                 return True
             else:
                 logger.debug("Unsuitable word class %s for word %s", _class, word)
