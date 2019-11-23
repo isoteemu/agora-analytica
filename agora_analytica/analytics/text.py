@@ -20,6 +20,7 @@ from cachetools import cached, LRUCache, LFUCache
 
 logger = logging.getLogger(__name__)
 
+
 class VoikkoTokenizer():
 
     """ Tokenize text """
@@ -33,13 +34,12 @@ class VoikkoTokenizer():
         """, re.VERBOSE + re.MULTILINE)
         self.err_treshold = 0.5
 
-    @cached({})
     def tokenize(self, text: str) -> List[str]:
         """ Return list of words """
         # Split into paragraphs.
         paragraphs = text.splitlines()
         tokens = chain(*map(self.tokenize_paragraph, paragraphs))
-        
+
         return tokens
 
     def tokenize_paragraph(self, sentence, use_suggestions=True):
@@ -121,7 +121,7 @@ class VoikkoTokenizer():
 
     def __getstate__(self):
         """ Return pickleable attributes.
-        
+
         :class:`Voikko` can't be serialized, so remove it.
         """
 
@@ -153,6 +153,7 @@ class TextTopics():
         self.token_cache = {}
         self._tokenizer = VoikkoTokenizer("fi")
 
+        # `kk` is used in assocation with time periods.
         self.stop_words += ["kk"]
 
         self.init(df, kwargs)
@@ -190,9 +191,6 @@ class TextTopics():
             self._lda = LDA(n_components=self.number_topics, n_jobs=-1)
             self._lda.fit(count_data)
 
-            joblib.dump(self._count_vector, file_words)
-            joblib.dump(self._lda, file_lda)
-
             if generate_visualization:
                 logger.debug("Generating LDA visualization. This might take a while")
                 from pyLDAvis import sklearn as sklearn_lda
@@ -200,6 +198,9 @@ class TextTopics():
 
                 LDAvis_prepared = sklearn_lda.prepare(self._lda, count_data, self._count_vector)
                 pyLDAvis.save_html(LDAvis_prepared, str(file_ldavis))
+
+            joblib.dump(self._count_vector, file_words)
+            joblib.dump(self._lda, file_lda)
 
     def instance_path(self):
         path = self._instance_path / "lda" / str(self.number_topics)
@@ -233,7 +234,6 @@ class TextTopics():
 
         return ((topic_max, word_for_source), (topic_min, word_for_target))
 
-    #@cached(LFUCache(maxsize=256))
     def suggest_topic_word(self, A, B, topic_id: int) -> List[Tuple[int, float]]:
         """ Find relevant word for topic.
 
@@ -291,7 +291,7 @@ class TextTopics():
     def _suitable_topic_word(self, word) -> bool:
         """
         Check if word can be used as topic word
-        
+
         Accepted word classes:
         :nimi:      Names; Words like `Linux` and `Microsoft`, `Kokoomus`
         :nimisana:  Substantives; like `ihminen`, `maahanmuutto`, `koulutus`, `Kokoomus`
@@ -318,7 +318,7 @@ class TextTopics():
 
 if __name__ == "__main__":
     import sys
-    from pprint import pprint 
+    from pprint import pprint
     v = VoikkoTokenizer()
 
     tokens = v.tokenize(" ".join(sys.argv[1:]))
