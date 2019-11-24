@@ -1,87 +1,22 @@
 <!doctype html>
-
 <html lang="{{get_locale()}}">
-
 <head>
     <meta charset="utf-8">
 
-    <title>Agora Analytica</title>
+    <title>{{branding['name']}}</title>
     <meta name="description" content="">
     <meta name="author" content="">
 
 
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
         integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
-
-    <style>
-    #graph svg {
-        background: radial-gradient(circle, rgba(233,233,233,1) 0%, rgba(205,205,205,1) 83%, rgba(149,149,149,1) 100%);
-        display: block;
-    }
-
-    #imperium text {
-        fill:#fff;
-        font-family:serif;
-        filter:drop-shadow( 0 0 5px rgba(0,0,0,0.692) );
-    }
-
-    #graph image {
-        image-rendering:optimizeSpeed;
-    }
-
-    .links line {
-        stroke: rgba(115, 115, 115, 1);
-        {# stroke-opacity: 0.6; #}
-    }
-
-    .nodes circle {
-        stroke-width: 5px;
-    }
-
-    .nodes .node {
-      transition: all 0.7s;
-      filter: grayscale(0) blur(0) drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
-    }
-
-    .nodes:hover .node {
-      filter: grayscale(100%) blur(1px) drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
-
-    }
-    .nodes:hover .node.hover {
-      filter: grayscale(0) blur(0)  drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
-    }
-    .nodes:hover .node.active {
-      filter:grayscale(50%) blur(0) drop-shadow( 0 1px 5px rgba(0,0,0,0.233) );
-    }
-    .node .topic {
-      transition: opacity 0.7s;
-      font-size:0.3em;
-      fill:#fff;
-      filter:drop-shadow( 0 0 0.05em rgb(0, 0, 0) );
-      /* display:none makes things a bit harder, but performance difference 
-         between visibility and display is quite noticable. */
-      display:none;
-      {# opacity: 0; #}
-    }
-
-    .node.hover .topic {
-      opacity:1;
-      display: inline;
-    }
-
-    .nodes .node-info {
-      display: none;
-    }
-
-    .nodes .active .node-info {
-      display: inline;
-    }
-    </style>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.scss.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/graph.scss.css') }}">
 
 </head>
 
 <body>
+    {#
     <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
         <a class=" navbar-brand" href="#">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" style="width:100px;">
@@ -114,29 +49,33 @@
                 </li>
         </div>
     </nav>
+    #}
 
-    {% if debug %}
+    {% if dev %}
         {% include 'force-control.html' %}
     {% endif %}
     <div id="graph">
-        <svg>
-            <g id="imperium">
-                <text>AGORA ANALYTICA</text>
-                <line x1="-6em" y1="0" x2="6em" y2="0" stroke-width=1 stroke="white" />
-                <line x1="-6em" y1="0" x2="6em" y2="0" stroke-width=1 stroke="white" />
+        <svg class="graph">
+            <g class="bg">
+                <text>{{branding['name']}}</text>
+                <line x1="-6em" y1="0" x2="6em" y2="0" />
+                <line x1="-6em" y1="0" x2="6em" y2="0" />
             </g>
         </svg>
+        <div id="overlay">
+        {{_("Derepublicing")}}
+        </div>
     </div>
 <script>
 (function() {
     {# Set graph size early #}
     const width = parseInt(window.innerWidth),
           height = parseInt(window.innerHeight);
-    let svg = document.querySelector("#graph svg");
+    let svg = document.querySelector("svg.graph");
     svg.setAttribute('width', width);
     svg.setAttribute('height', height);
 
-    let g = svg.querySelector("#imperium");
+    let g = svg.querySelector(".bg");
     let t = g.querySelector("text");
     const w = t.getBBox();
 
@@ -188,12 +127,13 @@ d3.json('{{url_for(".data_links")}}', function(err, data) {
     graph_run();
 });
     </script>
-
+    {#
     <footer class="page-footer bg-dark text-white">
         <div class="footer-copyright text-center color"> Agora Analytica 2019 -
             <a href="https://opensource.org/licenses/MIT"> MIT-lisenssi</a>
         </div>
     </footer>
+    #}
 
 
 

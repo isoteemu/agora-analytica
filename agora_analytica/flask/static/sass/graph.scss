@@ -1,0 +1,124 @@
+svg.graph {
+
+    $color: #fff;
+
+    background: radial-gradient(circle, rgba(233,233,233,1) 0%, rgba(205,205,205,1) 83%, rgba(149,149,149,1) 100%);
+    display: block;
+
+    g.bg {
+        text {
+            fill: $color;
+            font-family:serif;
+            font-size: 1em;
+            filter:drop-shadow( 0 0 5px rgba(0,0,0,0.692) );
+        }
+        line {
+            stroke: $color;
+            stroke-width: 0.7;
+        }
+    }
+    image {
+        // Rendering speedup
+        image-rendering:optimizeSpeed;
+    }
+
+    .nodes {
+        .node {
+            circle {
+                stroke-width: 2px;
+            }
+        }
+    }
+
+    .links {
+        line {
+            stroke: rgba(115, 115, 115, 1);
+            // stroke-opacity: 0.6;
+        }
+    }
+
+    // Limit effects when simulation is running 
+    // :not(.cooled) {
+    //     .nodes .node {
+    //         transition: none;
+    //     }
+    // }
+
+    $transition-base: all 0.3s;
+    $node-drop-shadow: drop-shadow( 0 1px 5px rgba(0,0,5px,0.233) );
+
+    .nodes {
+        .node .topic {
+            transition: $transition-base;
+            font-size:0.3em;
+            fill: $color;
+            filter: drop-shadow( 0 0 0.05em rgb(0, 0, 0) );
+            /* display:none makes things a bit harder, but performance difference 
+                between visibility and display is quite noticable. */
+            display:none;
+            opacity: 0;
+        }
+
+        .node circle {
+            transition: $transition-base;
+            filter: grayscale(0) blur(0) $node-drop-shadow;
+        }
+
+        &:hover {
+            .node {
+                &.hover {
+                    circle {
+                        filter: grayscale(0) blur(0) $node-drop-shadow;
+                    }
+
+                    .topic {
+                        opacity:1;
+                        display: inline;
+                    }
+                }
+                &:not(.hover) {
+                    circle {
+                        filter: grayscale(100%) blur(1px) $node-drop-shadow;
+                    }
+                }
+            }
+        }
+
+        .node.active {
+            circle {
+                filter:grayscale(50%) blur(0) $node-drop-shadow !important;
+            }
+            .node-info {
+                display:inline;
+            }
+        }
+        .node:not(.active) {
+            .node-info {
+                display: none;
+            }
+        }
+    }
+
+    // If simulation is still runing, skip transition effects and blur.
+    &:not(.cooled) .nodes {
+        .node circle {
+            transition: none;
+            filter: none;
+        }
+        &:hover .node:not(.hover) circle {
+            filter: grayscale(100%);
+        }
+    }
+}
+
+#overlay {
+
+    background-color: rgba(0,0,0,0.76);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    bottom: 0;
+    right: 0;
+}

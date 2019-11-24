@@ -5,7 +5,7 @@ from flask_babel import Babel, get_locale
 import os
 import logging
 
-from .. import instance_path
+from .. import instance_path, config
 
 
 def setup_app(name=__name__, **kwargs) -> Flask:
@@ -26,7 +26,7 @@ def setup_app(name=__name__, **kwargs) -> Flask:
     kwargs.setdefault("BABEL_DEFAULT_LOCALE", "fi")
     kwargs.setdefault("BABEL_DEFAULT_TIMEZONE", u"Europe/Helsinki")
 
-    app.config.update(kwargs)
+    app.config.update(config())
 
     try:
         os.makedirs(app.instance_path)
@@ -34,7 +34,7 @@ def setup_app(name=__name__, **kwargs) -> Flask:
         pass
 
     if not app.config.get("SECRET_KEY"):
-        key_file = os.path.join(app.instance_path, "secret_key")
+        key_file = app.instance_path / "secret_key"
 
         try:
             with open(key_file, 'rb') as fd:
@@ -52,21 +52,31 @@ def setup_app(name=__name__, **kwargs) -> Flask:
     logger = logging.getLogger(name)
     logger.addHandler(default_handler)
 
+    @app.context_processor
+    def inject_branding():
+        return dict(branding=app.config['branding'])
+
     return app
 
 
 if __name__ == "agora_analytica.flask":
-    debug = False
-    if os.environ.get("DEBUG"):
-        debug = True
 
-    app = setup_app(__name__, instance_path=instance_path(), DEBUG=debug)
-    app.debug = debug
+    app = setup_app(__name__, instance_path=instance_path())
+    app.config.from_pyfile('app.cfg', silent=True)
+
+    dev = app.config.get('ENV') == "development"
 
     @app.context_processor
     def inject_debug():
-        return dict(debug=debug if debug else app.debug)
+        return dict(dev=dev)
+
+    if dev:
+        # If running on development setup, compile sass files on fly
+        from sassutils.wsgi import SassMiddleware
+
+        app.wsgi_app = SassMiddleware(app.wsgi_app, {
+            __name__: ('static/sass', 'static/css', '/static/css')
+        })
 
     from . import views
     views.app_init(app)
-

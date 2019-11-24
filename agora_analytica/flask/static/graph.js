@@ -24,7 +24,6 @@ graph = {
 };
 
 graph.reset = function() {
-    console.log("RESET");
     graph.svg
         .attr("width", graph.width)
         .attr("height", graph.height);
@@ -108,8 +107,9 @@ function node_color(d) {
 function graph_run() {
     if(graph.nodes.length == 0 || graph.links.length == 0 || parties.length == 0) return;
 
+    d3.select("#graph #overlay").transition().duration(750).style("opacity", 0).remove();
     // Link into nodes.
-    graph.svg = d3.select("#graph svg");
+    graph.svg = d3.select("svg.graph");
 
     let nodes = graph.nodes;
     let links = graph.links;
@@ -234,6 +234,8 @@ function graph_run() {
         .text(function(d) { return d.id+": "+d.name+"\n"+d.party; });
 
     function ticked() {
+        graph.svg.classed("cooled", this.alpha() <= this.alphaMin())
+
         link
             .attr("x1", function(d) { return d.source.x; })
             .attr("y1", function(d) { return d.source.y; })
