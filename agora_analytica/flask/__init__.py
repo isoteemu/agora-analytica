@@ -7,6 +7,8 @@ import logging
 
 from .. import instance_path, config
 
+logger = logging.getLogger(__name__)
+
 
 def setup_app(name=__name__, **kwargs) -> Flask:
     r"""
@@ -62,7 +64,6 @@ def setup_app(name=__name__, **kwargs) -> Flask:
 if __name__ == "agora_analytica.flask":
 
     app = setup_app(__name__, instance_path=instance_path())
-    app.config.from_pyfile('app.cfg', silent=True)
 
     dev = app.config.get('ENV') == "development"
 
@@ -72,11 +73,15 @@ if __name__ == "agora_analytica.flask":
 
     if dev:
         # If running on development setup, compile sass files on fly
-        from sassutils.wsgi import SassMiddleware
+        try:
+            from sassutils.wsgi import SassMiddleware
 
-        app.wsgi_app = SassMiddleware(app.wsgi_app, {
-            __name__: ('static/sass', 'static/css', '/static/css')
-        })
+            app.wsgi_app = SassMiddleware(app.wsgi_app, {
+                __name__: ('static/sass', 'static/css', '/static/css')
+            })
+        except ImportError as e:
+            logger.exception(e)
+            logger.warning("Could not import sassutil for dynamic scss file compilation.")
 
     from . import views
     views.app_init(app)
