@@ -7,7 +7,8 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from agora_analytica import (
-    instance_path
+    instance_path,
+    config
 )
 
 from agora_analytica.analytics import measure_distances
@@ -24,7 +25,8 @@ import urllib.request
 logger = logging.getLogger(__name__)
 
 debug = False
-number_topics = 30
+
+settings = config()
 
 
 def _write(file, data, target=instance_path()):
@@ -36,9 +38,11 @@ def _write(file, data, target=instance_path()):
 
 @click.group()
 @click.option("--debug/--no-debug", default=debug, help="Show debug output")
-def cli(debug):
+@click.option("--config", default=instance_path() / "app.cfg", help="Config file")
+def cli(debug, config):
     globals()['debug'] = debug
     logging.basicConfig(level=(logging.DEBUG if debug else logging.INFO))
+    settings.read(config)
 
 
 @cli.command()
@@ -60,6 +64,7 @@ def deploy(target, url, force=False):
     print(local_filename, headers)
     with ZipFile(local_filename) as instance_zip:
         instance_zip.extractall(target)
+
 
 @cli.command()
 @click.option("--target", type=click.Path(file_okay=False),
@@ -97,7 +102,6 @@ def build(target, method, dataset_name, limit: int = 50):
     click.echo("Loading dataset ... ", nl=False)
 
     dataset = importlib.import_module(f".{dataset_name}", "agora_analytica.data")
-
     df = dataset.load_dataset()
 
     if limit < 2:
@@ -110,8 +114,12 @@ def build(target, method, dataset_name, limit: int = 50):
     click.echo("[DONE]")
 
     click.echo("Analyzing text ... ", nl=False)
+
     texts_df = df.text_answers().sort_index()
-    topics = TextTopics(texts_df, number_topics=number_topics, generate_visualization=debug)
+    number_of_topics = settings.get('build', 'number_of_topics', 10)
+    visualization = settings.getboolean('build', 'generate_visualization', debug)
+
+    topics = TextTopics(texts_df, number_topics=number_of_topics, generate_visualization=visualization)
     words = {}
 
     n = texts_df.shape[0]
