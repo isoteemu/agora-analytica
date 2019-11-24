@@ -151,7 +151,7 @@ class TextTopics():
         self._count_vector: CountVectorizer = None
         self._lda: LDA = None
         self.token_cache = {}
-        self._tokenizer = VoikkoTokenizer("fi")
+        self._tokenizer = None
 
         # `kk` is used in assocation with time periods.
         self.stop_words += ["kk"]
@@ -183,7 +183,7 @@ class TextTopics():
 
             # Setup word count vector
             self._count_vector = CountVectorizer(
-                tokenizer=self._tokenizer.tokenize,
+                tokenizer=self.text_tokenize,
                 stop_words=self.stop_words
             )
             count_data = self._count_vector.fit_transform(texts)
@@ -207,18 +207,33 @@ class TextTopics():
         path.mkdir(exist_ok=True, parents=True)
         return path
 
+    def tokenizer(self):
+        if not self._tokenizer:
+            self._tokenizer = VoikkoTokenizer("fi")
+        return self._tokenizer
+
+    @cached(LRUCache(maxsize=1024))
+    def text_tokenize(self, text):
+        """ Cached wrapper for `VoikkoTokenizer.tokenize()` """
+        return self.tokenizer().tokenize(text)
+
     def compare_series(self, source: pd.Series, target: pd.Series):
         """
         Compare two text sets.
 
         First tuple contains topic word not found in :param:`target`, and second tuple
         contains word not found in :param:`source`.
+
+        Note: This result will not be cached. Use :method:`compare_rows()` if possible.
         """
         # Convert them into tuples, so they can be cached.
         _source = tuple(source.dropna())
         _target = tuple(target.dropna())
 
-        return self.compare_count_data(*self._get_topics(_source), *self._get_topics(_target))
+        return self.compare_count_data(
+            *self._get_topics(_source),
+            *self._get_topics(_target)
+        )
 
     def compare_rows(self, df: pd.DataFrame, i, l):
         x = self.row_topics(df, i)
@@ -229,6 +244,7 @@ class TextTopics():
 
     @cached(LRUCache(maxsize=512), key=lambda self, df, idx: keys.hashkey(df.__class__, idx))
     def row_topics(self, df: pd.DataFrame, idx):
+        """ Return suitable topics from dataset `df` row :param:`idx` """
         x = df.loc[idx].dropna()
         if len(x) == 0:
             return None
@@ -315,7 +331,7 @@ class TextTopics():
         :sukunimi:  Last names, like `Kekkonen`
         """
 
-        for morph in self._tokenizer.analyze(word):
+        for morph in self.tokenizer().analyze(word):
             _class = morph.get("CLASS")
             if _class in ["nimi", "nimisana", "nimisana_laatusana", "lyhenne", "paikannimi", "sukunimi"]:
                 return True
