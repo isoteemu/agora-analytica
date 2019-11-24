@@ -16,7 +16,7 @@ from itertools import chain
 from typing import List, Dict, Tuple
 import logging
 
-from cachetools import cached, LRUCache, LFUCache
+from cachetools import cached, LRUCache, LFUCache, keys
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +207,7 @@ class TextTopics():
         path.mkdir(exist_ok=True, parents=True)
         return path
 
-    def compare_series(self, source: pd.Series, target: pd.Series) -> Tuple[Tuple[str, int], Tuple[str, int]]:
+    def compare_series(self, source: pd.Series, target: pd.Series):
         """
         Compare two text sets.
 
@@ -218,9 +218,23 @@ class TextTopics():
         _source = tuple(source.dropna())
         _target = tuple(target.dropna())
 
-        counts_data_source, topics_source = self._get_topics(_source)
-        counts_data_target, topics_target = self._get_topics(_target)
+        return self.compare_count_data(*self._get_topics(_source), *self._get_topics(_target))
 
+    def compare_rows(self, df: pd.DataFrame, i, l):
+        x = self.row_topics(df, i)
+        y = self.row_topics(df, l)
+        if not x or not y:
+            return None
+        return self.compare_count_data(*x, *y)
+
+    @cached(LRUCache(maxsize=512), key=lambda self, df, idx: keys.hashkey(df.__class__, idx))
+    def row_topics(self, df: pd.DataFrame, idx):
+        x = df.loc[idx].dropna()
+        if len(x) == 0:
+            return None
+        return self._get_topics(x)
+
+    def compare_count_data(self, counts_data_source, topics_source, counts_data_target, topics_target) -> Tuple[Tuple[str, int], Tuple[str, int]]:
         diffs = topics_source - topics_target
 
         topic_max = np.argmax(diffs)
@@ -265,7 +279,6 @@ class TextTopics():
         r = sorted([(i, prominence[i]) for i in prominence.argsort() if prominence[i] != 0 > -np.inf], key=lambda x: x[1], reverse=True)
         return r
 
-    @cached(LRUCache(512))
     def _get_topics(self, source) -> Tuple:
 
         count_data = self._count_vector.transform(source)

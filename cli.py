@@ -116,31 +116,20 @@ def build(target, method, dataset_name, limit: int = 50):
     click.echo("Analyzing text ... ", nl=False)
 
     texts_df = df.text_answers().sort_index()
-    number_of_topics = settings.get('build', 'number_of_topics', 10)
-    visualization = settings.getboolean('build', 'generate_visualization', debug)
+    number_of_topics = settings.getint('build', 'number_of_topics', fallback=10)
+    visualization = settings.getboolean('build', 'generate_visualization', fallback=debug)
 
     topics = TextTopics(texts_df, number_topics=number_of_topics, generate_visualization=visualization)
     words = {}
 
     n = texts_df.shape[0]
-    with click.progressbar(length=n * n) as bar:
-        for i, x in texts_df.iterrows():
 
-            x = x.dropna()
-            if len(x) == 0:
-                bar.update(n)
-                continue
-
-            for l, y in texts_df.iterrows():
-                bar.update(1)
-                if l <= i:
-                    continue
-                y = y.dropna()
-                if len(y) == 0:
-                    continue
-
-                r = topics.compare_series(x, y)
-
+    for a in range(n):
+        for b in range(a + 1, n):
+            i = texts_df.index[a]
+            l = texts_df.index[b]
+            r = topics.compare_rows(texts_df, i, l)
+            if r:
                 words[(i, l)] = r[0][1]
                 words[(l, i)] = r[1][1]
 
@@ -152,6 +141,7 @@ def build(target, method, dataset_name, limit: int = 50):
         "name": row.get("name"),
         "party": row.get("party"),
         "image": row.get("image", None),
+        "constituency": row.get("vaalipiiri")
     } for idx, row in df.iterrows()]
 
     data_links = [{
@@ -166,7 +156,9 @@ def build(target, method, dataset_name, limit: int = 50):
     click.echo("Writing data ... ", nl=False)
     _write("nodes", data_nodes, target)
     _write("links", data_links, target)
-
+    cfg = instance_path() / "app.cfg"
+    with cfg.open('w') as f:
+        settings.write(f, space_around_delimiters=True)
     click.echo("[DONE]")
 
 
