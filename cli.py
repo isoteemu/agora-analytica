@@ -137,7 +137,7 @@ def build(target, method, dataset_name, limit: int = 50):
 
     click.echo("Generating structures ... ", nl=False)
     data_nodes = [{
-        "id": idx,
+        "id": int(idx),
         "name": row.get("name"),
         "party": row.get("party"),
         "image": row.get("image", None),
@@ -145,11 +145,11 @@ def build(target, method, dataset_name, limit: int = 50):
     } for idx, row in df.iterrows()]
 
     data_links = [{
-        "source": i,
+        "source": int(i),
         "source_term": words.get((i, l), None),
         "distance": float(d),
         "target_term": words.get((l, i), None),
-        "target": l
+        "target": int(l)
     } for i, d, l in distances.values]
     click.echo("[DONE]")
 
