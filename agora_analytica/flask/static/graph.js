@@ -107,9 +107,10 @@ function node_color(d) {
 function graph_run() {
     if(graph.nodes.length == 0 || graph.links.length == 0 || parties.length == 0) return;
 
-    d3.select("#graph #overlay").transition().duration(750).style("opacity", 0).remove();
     // Link into nodes.
-    graph.svg = d3.select("svg.graph");
+    graph.svg = d3.select("svg.graph")
+    graph.svg.classed("running", true)
+    graph.svg.select("g.tree").remove()
 
     let nodes = graph.nodes;
     let links = graph.links;

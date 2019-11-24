@@ -56,15 +56,13 @@
     {% endif %}
     <div id="graph">
         <svg class="graph">
+            <g class="tree"></g>
             <g class="bg">
-                <text>{{branding['name']}}</text>
+                <text>{{branding['name']|upper}}</text>
                 <line x1="-6em" y1="0" x2="6em" y2="0" />
                 <line x1="-6em" y1="0" x2="6em" y2="0" />
             </g>
         </svg>
-        <div id="overlay">
-        {{_("Derepublicing")}}
-        </div>
     </div>
 <script>
 (function() {
@@ -83,25 +81,104 @@
     const _h = w.height/2;
 
     t.setAttribute("x", -_w);
-    t.setAttribute("y", -_h);
+    t.setAttribute("y", _h);
 
     let ls = g.getElementsByTagName("line");
     for(e of ls) {
         e.setAttribute("x1", -_w - _w/20);
         e.setAttribute("x2", _w + _w/20);
     }
-    ls[0].setAttribute("y1", -_h + _h/4);
-    ls[0].setAttribute("y2", -_h + _h/4);
+    ls[0].setAttribute("y1", _h + _h/4);
+    ls[0].setAttribute("y2", _h + _h/4);
 
-    ls[1].setAttribute("y1", -_h*2 - _h /3);
-    ls[1].setAttribute("y2", -_h*2 - _h /3);
+    ls[1].setAttribute("y1", - _h /3);
+    ls[1].setAttribute("y2", - _h /3);
 
-    const r = Math.min(width/w.width, height/w.height);
+    const d = Math.min(width/w.width, height/w.height);
 
-    g.setAttribute("transform", "translate("+width/2+","+height/2+") scale("+r/3+")");
-    g.setAttribute("y", parseInt(height / 2))
+    g.setAttribute("transform", "translate("+width/2+","+height/2+") scale("+d/3+")");
 })();
 
+(function() {
+    let svg = document.querySelector("svg.graph");
+
+    function createElement(tag) {
+        let e = document.createElementNS(svg.namespaceURI, tag)
+        return e
+    }
+
+    function render() {
+        let layer = svg.querySelector(".tree")
+        if(!layer) return
+
+        let nodes = createElement("g");
+        let links = createElement("g");
+        {# nodes.setAttribute("class", "nodes");
+        links.setAttribute("class", "links"); #}
+
+        layer.appendChild(links);
+        layer.appendChild(nodes);
+
+        const width = svg.getAttribute("width"),
+              height = svg.getAttribute("height");
+
+        const x = width / 2;
+        const y = height;
+
+        let run = true;
+        let s = 20;
+
+        grow(x, y, Math.PI/2, y / 5, 0)
+        window.setTimeout(() => run = false, 6000)
+
+        function grow(x1, y1, d, s, b) {
+            if(! run) return;
+
+            if(!svg.querySelector(".tree")) return;
+
+            if(s < 30) return;
+            const x2 = x1 + (Math.cos(d) * s)
+            const y2 = y1 - (Math.sin(d) * s)
+
+            let link = createElement("line");
+            let node = createElement("g");
+            let circ = createElement("circle");
+
+            node.setAttribute("class", "node");
+            circ.setAttribute("r", 10*Math.random()+5);
+            circ.setAttribute("cx", x2)
+            circ.setAttribute("cy", y2)
+
+            const hue = 360 * x1 / width;
+            const lig = 100 - (y1 / height * 60);
+            circ.setAttribute("fill", "hsl("+hue+", 50% ,"+lig+"%)")
+
+            link.setAttribute("x1", x1)
+            link.setAttribute("y1", y1)
+            link.setAttribute("x2", x2)
+            link.setAttribute("y2", y2)
+            link.setAttribute("stroke", "hsl("+hue+", 30%, 40%)")
+
+            node.appendChild(circ);
+            links.appendChild(link);
+            nodes.appendChild(node);
+
+            let _s = s;
+            let _d = d;
+            for(let i = 0; i < Math.floor(Math.random() * 5 + Math.max(2-b, 0) ); i++) {
+                _d = d - (Math.random() - 0.5) % Math.PI * 2
+                _s = s * 0.8 + (Math.random() / 4 * s)
+                window.setTimeout(grow, 200 + 800 * Math.random(), x2, y2, _d, _s, b+1)
+            }
+        }
+
+    }
+
+    svg.addEventListener("click", function() {
+        render();
+    });
+    render();
+})()
 </script>
 
 <script src="https://d3js.org/d3.v4.js"></script>
@@ -111,31 +188,33 @@ var parties = [];
 
 var default_image = {{url_for("static", filename="default-person.png")|tojson|safe}}
 
-d3.json('{{url_for(".data_parties")}}', function(err, data) {
-    if (err) throw err;
-    parties = data;
-    graph_run();
-});
-d3.json('{{url_for(".data_nodes")}}', function(err, data) {
-    if (err) throw err;
-    process_nodes(data)
-    graph_run();
-});
-d3.json('{{url_for(".data_links")}}', function(err, data) {
-    if (err) throw err;
-    process_links(data);
-    graph_run();
-});
+try {
+    d3.json('{{url_for(".data_parties")}}', function(err, data) {
+        if (err) throw err;
+        parties = data;
+        graph_run();
+    });
+    d3.json('{{url_for(".data_nodes")}}', function(err, data) {
+        if (err) throw err;
+        process_nodes(data)
+        graph_run();
+    });
+    d3.json('{{url_for(".data_links")}}', function(err, data) {
+        if (err) throw err;
+        process_links(data);
+        graph_run();
+    });
+} catch(e) {
+    alert({{_("Failed to load datasets.")|tojson}});
+    console.log(e);
+}
     </script>
-    {#
-    <footer class="page-footer bg-dark text-white">
+
+    {# <footer class="page-footer bg-dark text-white">
         <div class="footer-copyright text-center color"> Agora Analytica 2019 -
             <a href="https://opensource.org/licenses/MIT"> MIT-lisenssi</a>
         </div>
-    </footer>
-    #}
-
-
+    </footer> #}
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
         integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
