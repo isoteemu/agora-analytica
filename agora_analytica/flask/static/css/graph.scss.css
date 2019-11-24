@@ -1,18 +1,20 @@
 svg.graph {
-  background: radial-gradient(circle, #e9e9e9 0%, #cdcdcd 83%, #959595 100%);
+  background: #e9e9e9;
   display: block; }
+  svg.graph.running {
+    background: radial-gradient(circle, #e9e9e9 0%, #cdcdcd 83%, #959595 100%); }
   svg.graph g.bg text {
     fill: #fff;
     font-family: serif;
     font-size: 1em;
-    filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.692)); }
+    filter: drop-shadow(0 0.1em 5px black); }
   svg.graph g.bg line {
     stroke: #fff;
     stroke-width: 0.7; }
   svg.graph image {
     image-rendering: optimizeSpeed; }
   svg.graph .nodes .node circle {
-    stroke-width: 2px; }
+    stroke-width: 4px; }
   svg.graph .links line {
     stroke: #737373; }
   svg.graph .nodes .node .topic {
@@ -20,8 +22,6 @@ svg.graph {
     font-size: 0.3em;
     fill: #fff;
     filter: drop-shadow(0 0 0.05em black);
-    /* display:none makes things a bit harder, but performance difference 
-                between visibility and display is quite noticable. */
     display: none;
     opacity: 0; }
   svg.graph .nodes .node circle {
@@ -46,14 +46,14 @@ svg.graph {
   svg.graph:not(.cooled) .nodes:hover .node:not(.hover) circle {
     filter: grayscale(100%); }
 
-#overlay {
-  background-color: rgba(0, 0, 0, 0.76);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  bottom: 0;
-  right: 0; }
+svg.graph g.tree {
+  opacity: 1; }
+  svg.graph g.tree .node {
+    transition: opacity 0.7s;
+    opacity: 1; }
+    svg.graph g.tree .node:last-child {
+      opacity: 0; }
+  svg.graph g.tree .links link {
+    stroke: none; }
 
 /*# sourceMappingURL=graph.scss.css.map */
