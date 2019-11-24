@@ -7,7 +7,8 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from agora_analytica import (
-    instance_path
+    instance_path,
+    config
 )
 
 from agora_analytica.analytics import measure_distances
@@ -24,7 +25,8 @@ import urllib.request
 logger = logging.getLogger(__name__)
 
 debug = False
-number_topics = 30
+
+settings = config()
 
 
 def _write(file, data, target=instance_path()):
@@ -36,9 +38,11 @@ def _write(file, data, target=instance_path()):
 
 @click.group()
 @click.option("--debug/--no-debug", default=debug, help="Show debug output")
-def cli(debug):
+@click.option("--config", default=instance_path() / "app.cfg", help="Config file")
+def cli(debug, config):
     globals()['debug'] = debug
     logging.basicConfig(level=(logging.DEBUG if debug else logging.INFO))
+    settings.read(config)
 
 
 @cli.command()
@@ -61,6 +65,7 @@ def deploy(target, url, force=False):
     with ZipFile(local_filename) as instance_zip:
         instance_zip.extractall(target)
 
+
 @cli.command()
 @click.option("--target", type=click.Path(file_okay=False),
                           default=instance_path(),
@@ -81,7 +86,7 @@ def download_dataset(target, dataset_name):
 @click.option("--target", type=click.Path(file_okay=False),
                           default=instance_path(),
                           show_default=True)
-@click.option("--method", type=click.Choice(['linear', 'dummy', 'multiselect']),
+@click.option("--method", type=click.Choice(['linear', 'dummy',  'multiselect']),
                           help="Distance approximation method.",
                           default="linear", multiple=True)
 @click.option("--dataset-name", default="yle_2019", show_default=True)
@@ -97,12 +102,11 @@ def build(target, method, dataset_name, limit: int = 50):
     click.echo("Loading dataset ... ", nl=False)
 
     dataset = importlib.import_module(f".{dataset_name}", "agora_analytica.data")
-
     df = dataset.load_dataset()
 
     if limit < 2:
         raise click.BadParameter("Build should include more than 2 candidates.", param_hint="--limit")
-    df = df.head(limit)
+    df = df.sample(min(limit, df.shape[0]))
     click.echo("[DONE]")
 
     click.echo("Calculating distances ... ", nl=False)
@@ -110,26 +114,22 @@ def build(target, method, dataset_name, limit: int = 50):
     click.echo("[DONE]")
 
     click.echo("Analyzing text ... ", nl=False)
+
     texts_df = df.text_answers().sort_index()
-    topics = TextTopics(texts_df, number_topics=number_topics, generate_visualization=debug)
+    number_of_topics = settings.getint('build', 'number_of_topics', fallback=10)
+    visualization = settings.getboolean('build', 'generate_visualization', fallback=debug)
+
+    topics = TextTopics(texts_df, number_topics=number_of_topics, generate_visualization=visualization)
     words = {}
 
-    with click.progressbar(texts_df.iterrows(), length=texts_df.shape[0]) as texts:
+    n = texts_df.shape[0]
 
-        for i, x in texts:
-            x = x.dropna()
-            if len(x) == 0:
-                continue
-
-            for l, y in texts_df.iterrows():
-                if l <= i:
-                    continue
-                y = y.dropna()
-                if len(y) == 0:
-                    continue
-
-                r = topics.compare_series(x, y)
-
+    for a in range(n):
+        for b in range(a + 1, n):
+            i = texts_df.index[a]
+            l = texts_df.index[b]
+            r = topics.compare_rows(texts_df, i, l)
+            if r:
                 words[(i, l)] = r[0][1]
                 words[(l, i)] = r[1][1]
 
@@ -137,10 +137,11 @@ def build(target, method, dataset_name, limit: int = 50):
 
     click.echo("Generating structures ... ", nl=False)
     data_nodes = [{
-        "index": idx,
+        "id": int(idx),
         "name": row.get("name"),
         "party": row.get("party"),
         "image": row.get("image", None),
+        "constituency": row.get("vaalipiiri")
     } for idx, row in df.iterrows()]
 
     data_links = [{
@@ -155,7 +156,9 @@ def build(target, method, dataset_name, limit: int = 50):
     click.echo("Writing data ... ", nl=False)
     _write("nodes", data_nodes, target)
     _write("links", data_links, target)
-
+    cfg = instance_path() / "app.cfg"
+    with cfg.open('w') as f:
+        settings.write(f, space_around_delimiters=True)
     click.echo("[DONE]")
 
 

@@ -19,9 +19,12 @@ def index():
     """ Default page """
     return render_template("main.html", data=[])
 
+@bp.route('/_lda')
+def show_lda():
+    """ Debug function. Show Generated LDA """
+    return send_from_directory(current_app.instance_path, "lda/10/ldavis.html")
 
 # Following functions are placeholders.
-
 @bp.route('/api/links.json')
 def data_links():
     return send_from_directory(current_app.instance_path, "links.json")
