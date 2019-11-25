@@ -16,9 +16,10 @@ from itertools import chain
 from typing import List, Dict, Tuple
 import logging
 
-from cachetools import cached
+from cachetools import cached, LRUCache, LFUCache, keys
 
 logger = logging.getLogger(__name__)
+
 
 class VoikkoTokenizer():
 
@@ -38,6 +39,7 @@ class VoikkoTokenizer():
         # Split into paragraphs.
         paragraphs = text.splitlines()
         tokens = chain(*map(self.tokenize_paragraph, paragraphs))
+
         return tokens
 
     def tokenize_paragraph(self, sentence, use_suggestions=True):
@@ -60,7 +62,7 @@ class VoikkoTokenizer():
             nonlocal err_count
 
             # See: https://github.com/voikko/voikko-sklearn/blob/master/voikko_sklearn.py
-            FINNISH_STOPWORD_CLASSES = ["huudahdussana", "seikkasana", "lukusana", "asemosana", "sidesana", "suhdesana", "kieltosana"]
+            FINNISH_STOPWORD_CLASSES = ["huudahdussana", "seikkasana", "lukusana", "asemosana", "sidesana", "suhdesana"]
 
             # Check for previous stemming result
             stemmed_word = self.stem_map.get(word, None)
@@ -82,6 +84,9 @@ class VoikkoTokenizer():
                     if suggested is not None:
                         # return tokenized suggestion - It can be two or more words.
                         return self.tokenize_paragraph(suggested, use_suggestions=False)
+
+            # Prefer nimisana over others
+            analysis = sorted(analysis, key=lambda x: -1 if x.get('CLASS') in ["nimisana"] else 0)
 
             for _word in analysis:
                 # Find first suitable iteration of word.
@@ -106,14 +111,17 @@ class VoikkoTokenizer():
 
         return r
 
-    @cached({})
+    @cached(LFUCache(maxsize=512))
     def analyze(self, word: str) -> List[Dict]:
-        """ Analyze word, returning morhpological data """
+        """ Analyze word, returning morhpological data.
+
+            Uses :class:`LFUCache` - least frequently used - cache.
+         """
         return self.voikko.analyze(word)
 
     def __getstate__(self):
         """ Return pickleable attributes.
-        
+
         :class:`Voikko` can't be serialized, so remove it.
         """
 
@@ -142,7 +150,11 @@ class TextTopics():
         self.stop_words: List = get_stop_words("fi")
         self._count_vector: CountVectorizer = None
         self._lda: LDA = None
-        self._tokenizer = VoikkoTokenizer("fi")
+        self.token_cache = {}
+        self._tokenizer = None
+
+        # `kk` is used in assocation with time periods.
+        self.stop_words += ["kk"]
 
         self.init(df, kwargs)
 
@@ -161,23 +173,23 @@ class TextTopics():
         file_ldavis = self.instance_path() / "ldavis.html"
 
         try:
+            # Try loading saved lda files.
             self._count_vector = joblib.load(file_words)
             self._lda = joblib.load(file_lda)
-        except FileNotFoundError:
+        except FileNotFoundError as e:
+            logger.exception(e)
+
             texts = [x for x in df.to_numpy().flatten() if x is not np.NaN]
 
             # Setup word count vector
             self._count_vector = CountVectorizer(
-                tokenizer=self._tokenizer.tokenize,
+                tokenizer=self.text_tokenize,
                 stop_words=self.stop_words
             )
             count_data = self._count_vector.fit_transform(texts)
 
             self._lda = LDA(n_components=self.number_topics, n_jobs=-1)
             self._lda.fit(count_data)
-
-            joblib.dump(self._count_vector, file_words)
-            joblib.dump(self._lda, file_lda)
 
             if generate_visualization:
                 logger.debug("Generating LDA visualization. This might take a while")
@@ -187,80 +199,156 @@ class TextTopics():
                 LDAvis_prepared = sklearn_lda.prepare(self._lda, count_data, self._count_vector)
                 pyLDAvis.save_html(LDAvis_prepared, str(file_ldavis))
 
+            joblib.dump(self._count_vector, file_words)
+            joblib.dump(self._lda, file_lda)
+
     def instance_path(self):
         path = self._instance_path / "lda" / str(self.number_topics)
         path.mkdir(exist_ok=True, parents=True)
         return path
 
-    def compare_series(self, source: pd.Series, target: pd.Series) -> Tuple[Tuple[str, int], Tuple[str, int]]:
+    def tokenizer(self):
+        if not self._tokenizer:
+            self._tokenizer = VoikkoTokenizer("fi")
+        return self._tokenizer
+
+    @cached(LRUCache(maxsize=1024))
+    def text_tokenize(self, text):
+        """ Cached wrapper for `VoikkoTokenizer.tokenize()` """
+        return self.tokenizer().tokenize(text)
+
+    def compare_series(self, source: pd.Series, target: pd.Series):
         """
-        Compare two text sets
+        Compare two text sets.
+
+        First tuple contains topic word not found in :param:`target`, and second tuple
+        contains word not found in :param:`source`.
+
+        Note: This result will not be cached. Use :method:`compare_rows()` if possible.
         """
         # Convert them into tuples, so they can be cached.
         _source = tuple(source.dropna())
         _target = tuple(target.dropna())
 
-        source_topics = self._get_topics(_source)
-        target_topics = self._get_topics(_target)
+        return self.compare_count_data(
+            *self._get_topics(_source),
+            *self._get_topics(_target)
+        )
 
-        # Calculate biggest differences between topics.
-        diffs = source_topics - target_topics
+    def compare_rows(self, df: pd.DataFrame, i, l):
+        x = self.row_topics(df, i)
+        y = self.row_topics(df, l)
+        if not x or not y:
+            return None
+        return self.compare_count_data(*x, *y)
+
+    @cached(LRUCache(maxsize=512), key=lambda self, df, idx: keys.hashkey(df.__class__, idx))
+    def row_topics(self, df: pd.DataFrame, idx):
+        """ Return suitable topics from dataset `df` row :param:`idx` """
+        x = df.loc[idx].dropna()
+        if len(x) == 0:
+            return None
+        return self._get_topics(x)
+
+    def compare_count_data(self, counts_data_source, topics_source, counts_data_target, topics_target) -> Tuple[Tuple[str, int], Tuple[str, int]]:
+        diffs = topics_source - topics_target
 
         topic_max = np.argmax(diffs)
         topic_min = np.argmin(diffs)
 
-        source_topic = self.find_topic_word(_source, topic_max)
-        target_topic = self.find_topic_word(_target, topic_min)
+        source_words = self.suggest_topic_word(counts_data_source, counts_data_target, topic_max)
+        target_words = self.suggest_topic_word(counts_data_target, counts_data_source, topic_min)
 
-        return ((topic_max, source_topic), (topic_min, target_topic))
+        word_for_source = self.suitable_topic_word(source_words) if len(source_words) else None
+        word_for_target = self.suitable_topic_word(target_words) if len(target_words) else None
 
-    @cached({})
-    def _get_topics(self, source):
-        source_count = self._count_vector.transform(source)
-        return self._lda.transform(source_count).mean(axis=0)
+        return ((topic_max, word_for_source), (topic_min, word_for_target))
 
-    @cached({})
-    def find_topic_word(self, text: List, topic_id):
-        source = pd.Series(self._tokenizer.tokenize("\n\n".join(text))).value_counts()
+    def suggest_topic_word(self, A, B, topic_id: int) -> List[Tuple[int, float]]:
+        """ Find relevant word for topic.
 
-        words = pd.Series(self.topic_words(topic_id))
-        # Lower weights of own words, preferring topic words.
-        counts = source.map(np.log) * words
+        Copares :param:`A` and :param:`B` words, and topic words to find
+        suitable word with enough difference between `A` and `B`.
 
-        # Debugging output
-        cdf = pd.DataFrame([counts.sort_values(ascending=False).head(10)])
-        logger.debug(cdf.append(source.map(np.log), ignore_index=True).append(words, ignore_index=True).iloc[:, 0:9])
-        
-        for word, c in counts.sort_values(ascending=False).iteritems():
-            if self._suitable_topic_word(word):
-                return word
+        :param A: :class:`csr_matrix` Target to find word for.
+        :param B: :class:`csr_matrix` Comparative target for `A`
+        :param topic_id: lda topic id number.
 
-        raise RuntimeError("Could not find suitable topic word.")
+        :return: List of tuples in prominen order.
+                 First instance in tuple is word vector feature number, and second is prominence value.
+        """
+        # Generate sum of used words
+        a_sum = A.toarray().sum(0)
+        b_sum = B.toarray().sum(0)
 
-    @cached({})
-    def topic_words(self, id: int) -> Dict[str, int]:
-        """ Words used in topic, sorted from most to least used. """
-        words = self.vector_words()
-        topic_words = self._lda.components_[id].argsort()[::-1]
+        # Topic word, prefering unique ones.
+        λ = self._lda.components_[topic_id] / self._lda.components_.sum(0)
 
-        # Generate word list for topic
-        r = {}
-        for wid in topic_words:
-            # Calculate relevancy for word
-            r[words[wid]] = self._lda.components_[id][wid] / sum([x[wid] for x in self._lda.components_])
+        # Remove words from A that B has used too.
+        # Note: Doesn't actually remove.
+        complement = a_sum - b_sum
 
+        # Use logarithm, so topic words are prefered.
+        prominence = np.log(complement) * λ
+
+        # Generate list of words, ordered by prominence
+        r = sorted([(i, prominence[i]) for i in prominence.argsort() if prominence[i] != 0 > -np.inf], key=lambda x: x[1], reverse=True)
         return r
 
-    @cached({})
-    def _suitable_topic_word(self, word) -> bool:
-        """ Check if word can be used as topic word """
+    def _get_topics(self, source) -> Tuple:
 
-        for morph in self._tokenizer.analyze(word):
-            if morph.get("CLASS") in ["nimi", "nimisana"]:
+        count_data = self._count_vector.transform(source)
+        return (count_data, self._lda.transform(count_data).mean(axis=0))
+
+    # sequence list is too volatile to be cached.
+    def suitable_topic_word(self, seq: List[List[int, ]]) -> str:
+        """
+        Find first suitable word from :param:`seq` list.
+
+        :param: 1d matrix of word feature indexes. Only first column in row
+                is interepted as feature number.
+        """
+        vector_words = self.vector_words()
+        """ Find first suitable word from word list """
+        for r in seq:
+            word = vector_words[r[0]]
+            if self._suitable_topic_word(word):
+                return word
+        return None
+
+    @cached(LFUCache(maxsize=512))
+    def _suitable_topic_word(self, word) -> bool:
+        """
+        Check if word can be used as topic word
+
+        Accepted word classes:
+        :nimi:      Names; Words like `Linux` and `Microsoft`, `Kokoomus`
+        :nimisana:  Substantives; like `ihminen`, `maahanmuutto`, `koulutus`, `Kokoomus`
+        :laatusana: Adjectives; words like `maksuton`
+        :nimisana_laatusana: Adjectives, that are not "real", like `rohkea` or `liberaali`
+        :lyhenne:   Abbrevations; Words like `EU`
+        :paikannimi:Geographical locations, like `Helsinki`
+        :sukunimi:  Last names, like `Kekkonen`
+        """
+
+        for morph in self.tokenizer().analyze(word):
+            _class = morph.get("CLASS")
+            if _class in ["nimi", "nimisana", "nimisana_laatusana", "lyhenne", "paikannimi", "sukunimi"]:
                 return True
+            else:
+                logger.debug("Unsuitable word class %s for word %s", _class, word)
 
         return False
 
-    @cached({})
     def vector_words(self) -> List:
+        """ Feature names in CountVector """
         return self._count_vector.get_feature_names()
+
+
+if __name__ == "__main__":
+    import sys
+    from pprint import pprint
+    v = VoikkoTokenizer()
+
+    tokens = v.tokenize(" ".join(sys.argv[1:]))
+    [pprint(sorted(v.analyze(t), key=lambda x: -1 if x.get('CLASS') in ["nimisana"] else 0)) for t in tokens]

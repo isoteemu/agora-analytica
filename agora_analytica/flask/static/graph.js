@@ -1,64 +1,97 @@
 
-var width = parseInt(window.innerWidth),
-    height = parseInt(window.innerHeight);
 
-var circleRadius = 15;
+graph = {
+    width: parseInt(window.innerWidth),
+    height: parseInt(window.innerHeight),
+
+    nodes: [],
+    links: [],
+    topics: [],
+
+    link_count: 3,
+    node_radius: 15,
+    distance: 30,
+    strength: -30,
+    distance_adaptive: true,
+    collide: false,
+    decay: true,
+    alpha_decay: null,
+
+    svg: null,
+
+    zoom: null,
+    simulation: null,
+};
+
+graph.reset = function() {
+    graph.svg
+        .attr("width", graph.width)
+        .attr("height", graph.height);
+
+    graph.simulation.force("charge").strength(graph.strength)
+
+    graph.simulation.force("link")
+        .links(graph.links);
+
+    graph.simulation.force("collide")
+        .radius(graph.node_radius)
+        .strength(0.7 * graph.collide)
+
+    graph.simulation.alphaDecay((graph.decay) ? graph.alpha_decay : 0 )
+
+    graph.svg.selectAll("defs image.node-image")
+        .attr("width", graph.node_radius * 2)
+        .attr("height", graph.node_radius * 2),
+    graph.svg.selectAll(".nodes circle")
+        .attr("r", graph.node_radius)
+
+    graph.simulation.alpha(1).restart();
+}
+
+function process_nodes(data) {
+    graph.nodes = data
+}
 
 function process_links(data) {
-    var links_map = {};
-    
-    var attrs = {};
+    let LinksMap = function() {
+        null
+    }
 
-    // Collect node links, from closest to furthest.
-    data.sort((a, b) => a["distance"] - b["distance"] ).forEach((element) => {
+    LinksMap.prototype.add = function(s,t,el) {
+        links_map[s] = (s in links_map) ? links_map[s] : 0
+        links_map[t] = (t in links_map) ? links_map[t] : 0
+        let p = links_map[s];
+        let q = links_map[t];
 
-        // Pointers to node indexes.
-        source = element["source"];
-        target = element["target"];
-        let k = [parseInt(source), parseInt(target)].sort();
+        // If both nodes have enought links, skip
+        if(p >= graph.link_count && q >= graph.link_count) return false;
 
-        if(!(source in links_map)) links_map[source] = [];
-        if(!(target in links_map)) links_map[target] = [];
-        if(!(k in attrs)) attrs[k] = {
-            distance: element.distance + circleRadius / 10 + 1,
-            source_term: element.source_term,
-            target_term: element.target_term,
-        };
+        links_map[s] += 1;
+        links_map[t] += 1;
+        graph.links.push(el)
 
-        // Pointers
-        let src_links = links_map[source];
-        let trg_links = links_map[target];
-
-        if( src_links.length < 3) src_links.push(target);
-        if( trg_links.length < 3) trg_links.push(source);
-    });
-
-    for(let source in links_map) {
-        for(let target of links_map[source]) {
-            let [src, trg] = [parseInt(source), parseInt(target)].sort();
-            let x_attr = attrs[[src,trg]]
-            links.push(Object.assign({
-                source: src,
-                target: trg
-            }, x_attr));
-
-            // Add topics. Source and target are reversed, so links are on opposite sides.
-            if (x_attr['source_term']) {
-                topics.push({
-                    source: source,
-                    target: target,
-                    term: x_attr['source_term']
-                });
-            }
-            if (x_attr['target_term']) {
-                topics.push({
-                    source: target,
-                    target: source,
-                    term: x_attr['target_term']
-                });
-            }
+        if (el['source_term']) {
+            graph.topics.push({
+                source: s,
+                target: t,
+                term: el['source_term']
+            });
+        }
+        if (el['target_term']) {
+            graph.topics.push({
+                source: t,
+                target: s,
+                term: el['target_term']
+            });
         }
     }
+
+    let links_map = new LinksMap()
+
+    data.sort((a, b) => a["distance"] - b["distance"] ).forEach((element) => {
+        links_map.add(element.source, element.target, element)
+    });
+
 }
 
 function node_color(d) {
@@ -71,111 +104,139 @@ function node_color(d) {
     return color;
 }
 
-function run() {
-
-    if(nodes.length == 0 || links.length == 0 || parties.length == 0) return;
+function graph_run() {
+    if(graph.nodes.length == 0 || graph.links.length == 0 || parties.length == 0) return;
 
     // Link into nodes.
-    var svg = d3.select("#graph svg")
-        .attr("width", width)
-        .attr("height", height);
+    graph.svg = d3.select("svg.graph")
+    graph.svg.classed("running", true)
+    graph.svg.select("g.tree").remove()
 
-    var defs = svg.append("defs");
+    let nodes = graph.nodes;
+    let links = graph.links;
+
+    var defs = graph.svg.append("defs");
     defs.append("clipPath")
         .attr("id", "clip-circle")
         .append("circle")
             .attr("cx", 0)
             .attr("cy", 0)
-            .attr("r", circleRadius)
+            // .attr("r", graph.node_radius)
 
     for(n of nodes) {
         defs.append("pattern")
-            .attr("id", "node-"+n.index+"-image")
+            .attr("id", "node-"+n.id+"-image")
             .attr("width", "100%")
             .attr("height", "100%")
             .append("image")
+                .classed("node-image", true)
                 .attr("preserveAspectRatio", "xMidYMid slice")
                 .attr("xlink:href", n.image ? n.image : default_image)
-                .attr("width", circleRadius * 2) 
-                .attr("height", circleRadius * 2);
-
+                .attr("width", graph.node_radius * 2) 
+                .attr("height", graph.node_radius * 2)
     }
 
-    var zoom = d3.zoom()
+    graph.zoom = d3.zoom()
         .on("zoom", function () {
             graph_layer.attr("transform", d3.event.transform)
         });
 
-    var graph_layer = svg.call(zoom).append("g").attr("id", "graph_layer");
+    let graph_layer = graph.svg.call(graph.zoom).append("g").attr("id", "graph_layer");
 
-    var simulation = d3.forceSimulation()
-        .force("link", d3.forceLink()
-            .id(function(d) { return d.index; })
-            .distance(function(d) {return d.distance * 30;}))
+    graph.simulation = d3.forceSimulation();
+    graph.alpha_decay = graph.simulation.alphaDecay()
+
+    let force_link = d3.forceLink()
+        .distance(function(d) {
+            /* Distance calculation */
+            let distance = d.distance * graph.distance;
+            if(graph.distance_adaptive) distance = distance * Math.sqrt(nodes.length)
+            distance += (graph.node_radius * 2)
+            return distance
+        })
+        .id(function(d) { return d.id })
+
+    graph.simulation
+        .force("link", force_link)
+        .force("center", d3.forceCenter(graph.width / 2, graph.height / 2))
         .force("charge", d3.forceManyBody())
-        .force("center", d3.forceCenter(width / 2, height / 2));
+        .force("collide", d3.forceCollide(graph.node_radius))
+
+        // Jos halutaan pallon muotoinen
+        // .force("x", d3.forceX())
+        // .force("y", d3.forceY())
+
+    graph.simulation
+        .nodes(graph.nodes)
+        .on("tick", ticked)
 
     var link = graph_layer.append("g")
         .attr("class", "links")
         .selectAll("line")
-        .data(links)
+        .data(graph.links)
         .enter()
             .append("line")
-            .attr("stroke-width", 1)
 
     var node = graph_layer.append("g")
         .attr("class", "nodes")
         .selectAll("g")
         .data(nodes)
         .enter().append("g")
-            .classed("node", true)
-            .attr("id", (d) => "node-"+d.index)
+            .attr("class", "node")
+            .attr("id", (d) => "node-"+d.id)
+        .on("mouseover", function() {
+            // SVG uses ordered rendering. Move focused element to top
+            // of node list.
+            let e = d3.select(this).raise();
+            e.classed("hover", true)
+        }).on("mouseout", function() {
+            d3.select(this).classed("hover", false)
+        });
+        
+    var circles = node.append("circle")
+        .attr("r", graph.node_radius)
+        .attr("stroke", node_color)
+        .attr("fill", (d) => "url(#node-"+ d.id +"-image)")
+        .on("click", function(obj) {
+            let g = d3.select(this.parentElement);
 
+            var toggle = !g.classed("active");
+            g.classed("active", toggle);
+        });
+
+    const topics = graph.topics;
     let topic_nodes = node.select(function(e) {
         let g = d3.select(this);
 
         g.selectAll().append("g")
-            .data(
-                topics.filter((x) => x.source == g.data()[0].index)
-            ).enter().append("g")
+            /* Topics pointing to target */
+            .data(topics.filter(function(x) { return x.target == g.data()[0].id }))
+            .enter().append("g")
                 .classed("topic", true)
                 .append("text")
-                    .text((d) => d.term);
+                    .text((d) => d.term)
     });
 
-    var circles = node.append("circle")
-        .attr("r", circleRadius)
-        .attr("stroke", node_color)
-        .attr("fill", (d) => "url(#node-"+ d.index +"-image)")
-        // .call(d3.drag()
-        //     .on("start", dragstarted)
-        //     .on("drag", dragged)
-        //     .on("end", dragended))
-        .on("click", function(obj) {
-            var g = d3.select(this.parentElement);
-            var toggle = !g.classed("active");
-            g.classed("active", toggle);
-        })
+    /* Topic texts are hidden by default, and position is not updated for them in simulation.
+       Update positions by event trigger. */
+    node.on("mouseover.topic", function() {
+        d3.select(this).selectAll("g.topic").each(function(e){align_topic_texts(this)})
+    });
 
     var labels = node.append("text")
         .text(function(d) {
             return d.name + "\r\n(" + d.party +")";
         })
         .classed("node-info", true)
-        .attr('x', circleRadius)
-        .attr('y', circleRadius);
+        .attr('x', graph.node_radius)
+        .attr('y', graph.node_radius);
 
     node.append("title")
-        .text(function(d) { return d.name+"\n"+d.party; });
-
-    simulation
-        .nodes(nodes)
-        .on("tick", ticked);
-
-    simulation.force("link")
-        .links(links);
+        .text(function(d) { return d.id+": "+d.name+"\n"+d.party; });
 
     function ticked() {
+        graph.svg.classed("cooled", this.alpha() <= this.alphaMin())
+
         link
             .attr("x1", function(d) { return d.source.x; })
             .attr("y1", function(d) { return d.source.y; })
@@ -185,29 +246,41 @@ function run() {
         node.attr("transform", function(d) {
             return "translate(" + d.x + "," + d.y + ")";
         })
-        node.selectAll("g.topic").attr("transform", function(d) {
-            const atan = Math.atan2(nodes[d.source].y - nodes[d.target].y, nodes[d.source].x - nodes[d.target].x)
+        node.selectAll("g.topic").each(function(e){ align_topic_texts(this)})
+    }
 
+    function align_topic_texts(el) {
+        d3.select(el).attr("transform", function(d) {
+
+            const source = nodes.find((x) => x.id == d.source)
+            const target = nodes.find((x) => x.id == d.target)
+            const atan = Math.atan2(source.y - target.y, source.x - target.x)
+            if(d3.select(this).style("display") == "none") return
             const w = this.getBBox();
 
-            // Aling
+            // Align
             const s = Math.sin(atan)
             const c = Math.cos(atan)
-            let y = s * (circleRadius + 2)// + (w.height / 2 * s);
-            let x = c * (circleRadius + 2)// + (w.width / 2 * c); 
+            let y = s * (graph.node_radius)
+            let x = c * (graph.node_radius)
             // Center point is bottom left, make it "center"
-            y -= w.height / 2;
-            x += w.width / 2;
+            y += w.height / 2;
+            x -= w.width / 2;
             // Push outside regarding box size
             y += w.height / 2 * s;
             x += w.width / 2 * c;
 
-            return "translate("+ x * -1 +","+ y * -1 +")"
+            return "translate("+ x +","+ y +")"
         });
     }
 
+    node.call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended))
+
     function dragstarted(d) {
-        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+        if (!d3.event.active) graph.simulation.alphaTarget(0.3).restart();
         d.fx = d.x;
         d.fy = d.y;
     }
@@ -218,18 +291,18 @@ function run() {
     }
 
     function dragended(d) {
-        if (!d3.event.active) simulation.alphaTarget(0);
+        if (!d3.event.active) graph.simulation.alphaTarget(0);
         d.fx = null;
         d.fy = null;
     }
 
     d3.select(window).on("resize", function() {
-        width = parseInt(window.innerWidth);
-        height = parseInt(window.innerHeight);
+        graph.width = parseInt(window.innerWidth);
+        graph.height = parseInt(window.innerHeight);
 
-        svg.attr("width", width)
-           .attr("height", height);
-
+        graph.svg.attr("width", graph.width)
+                 .attr("height", graph.height);
     });
+    graph.reset();
 
 }

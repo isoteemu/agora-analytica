@@ -24,7 +24,8 @@ ACCEPTED_TYPES = {
 
 logger = logging.getLogger(__name__)
 
-def measure_distances(df: DataSetInstance, methods: List=["linear", "multiselect"], **kwargs) -> pd.DataFrame:
+
+def measure_distances(df: DataSetInstance, methods: List = ["linear", "multiselect"], **kwargs) -> pd.DataFrame:
     """
     Measure distance between candidates.
 
@@ -63,6 +64,7 @@ def measure_distances(df: DataSetInstance, methods: List=["linear", "multiselect
     # `source` and `target` are pointers to dataframe indexes. 
     # `distance` indicates calculated distance value between `source` and
     # `target`.
+
     distances = pd.DataFrame({
         "source": pd.Series(dtype='int64'),
         "distance": pd.Series(dtype='float'),
@@ -75,8 +77,8 @@ def measure_distances(df: DataSetInstance, methods: List=["linear", "multiselect
         # processed multiple times.
         offset = i + 1
         for l in range(offset, df.shape[0]):
-            source = df.loc[i]
-            target = df.loc[l]
+            source = df.iloc[i]
+            target = df.iloc[l]
 
             # Loop through all requested calculation methods, and calculate
             # distance
@@ -88,9 +90,14 @@ def measure_distances(df: DataSetInstance, methods: List=["linear", "multiselect
                 # Calculate how many columns this distance is proportional to.
                 weight = questions_n * len(answers[method].columns)
                 distance += calc.distance(source, target, answers[method], **kwargs) / weight
-
-            _d = pd.Series([np.int(i), distance, np.int(l)], index=distances.columns, dtype='object')
+            _d = pd.Series([df.index[i], distance, df.index[l]], index=distances.columns, dtype='object')
             distances = distances.append(_d, ignore_index=True)
+
+    # Normalize distances to 0-1 range.
+    df_slice = distances.loc[:, "distance"]
+    dist_min = df_slice.min()
+    dist_diff = df_slice.max() - dist_min
+    distances["distance"] = (df_slice - dist_min) / dist_diff
 
     return distances
 
