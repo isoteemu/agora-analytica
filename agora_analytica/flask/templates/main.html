@@ -16,7 +16,6 @@
 </head>
 
 <body>
-    {#
     <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
         <a class=" navbar-brand" href="#">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" style="width:100px;">
@@ -49,7 +48,6 @@
                 </li>
         </div>
     </nav>
-    #}
 
     {% if dev %}
         {% include 'force-control.html' %}
@@ -210,11 +208,11 @@ try {
 }
     </script>
 
-    {# <footer class="page-footer bg-dark text-white">
+    <footer class="page-footer bg-dark text-white">
         <div class="footer-copyright text-center color"> Agora Analytica 2019 -
             <a href="https://opensource.org/licenses/MIT"> MIT-lisenssi</a>
         </div>
-    </footer> #}
+    </footer>
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
         integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
