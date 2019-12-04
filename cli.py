@@ -119,19 +119,19 @@ def build(target, method, dataset_name, limit: int = 50):
     number_of_topics = settings.getint('build', 'number_of_topics', fallback=10)
     visualization = settings.getboolean('build', 'generate_visualization', fallback=debug)
 
-    #topics = TextTopics(texts_df, number_topics=number_of_topics, generate_visualization=visualization)
+    topics = TextTopics(texts_df, number_topics=number_of_topics, generate_visualization=visualization)
     words = {}
 
     n = texts_df.shape[0]
 
-#    for a in range(n):
-#        for b in range(a + 1, n):
-#            i = texts_df.index[a]
-#            l = texts_df.index[b]
-#            r = topics.compare_rows(texts_df, i, l)
-#            if r:
-#                words[(i, l)] = r[0][1]
-#                words[(l, i)] = r[1][1]
+    for a in range(n):
+        for b in range(a + 1, n):
+            i = texts_df.index[a]
+            l = texts_df.index[b]
+            r = topics.compare_rows(texts_df, i, l)
+            if r:
+                words[(i, l)] = r[0][1]
+                words[(l, i)] = r[1][1]
 
     click.echo("[DONE]")
 
