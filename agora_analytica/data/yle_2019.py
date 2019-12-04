@@ -143,15 +143,6 @@ def download_dataset(filepath=DATASET_PATH, url=DATASET_URL, **kwargs) -> pd.Dat
         # Puretaan haluttu tiedosto, ja kääritään pandan dataframen ympärille.
         data = pd.read_csv(BytesIO(pakattu_tiedosto.read(DATASET_NAME)))
 
-#        # Replace with np.NaN, as Yle is using "-" to indicate skipped and no opinion
-#        # values
-#        data = data.replace("-", np.NaN)
-#
-#        # Add names, if data has none.
-#        if "name" not in data.columns:
-#            names = pd.Series(generate_names(data.shape[0]), name="name")
-#            data = data.assign(name=names)
-
         data.to_csv(filepath, index_label=INDEX)
         logger.debug("File downloaded as:", filepath)
 
