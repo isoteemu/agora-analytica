@@ -3,15 +3,13 @@ from requests import get
 from requests.exceptions import RequestException
 from requests.exceptions import ConnectionError
 from contextlib import closing
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 import json
 import os.path
 from os import getcwd
 from os import mkdir
 from pathlib import Path
-from agora_analytica import (
-    instance_path
-)
+from .utils import _instance_path
 
 
 
@@ -71,7 +69,10 @@ def hae_dataa():
     return
 
 if __name__ == "__main__":
-    hae_dataa()
+
+    text = input("Do you want to scrape data, THIS MIGHT TAKE UP TO 15 minutes Y/N? ") 
+    if (text == "Y"):
+        hae_dataa()
 
 
 
