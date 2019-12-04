@@ -197,11 +197,13 @@ function graph_run() {
         .attr("r", graph.node_radius)
         .attr("stroke", node_color)
         .attr("fill", (d) => "url(#node-"+ d.id +"-image)")
-        .on("click", function(obj) {
-            let g = d3.select(this.parentElement);
+        .on("click", function(d) {
+            console.log(d);
+            show_node_info(d.id);
+            /*let g = d3.select(this.parentElement);
 
             var toggle = !g.classed("active");
-            g.classed("active", toggle);
+            g.classed("active", toggle);*/
         });
 
     const topics = graph.topics;

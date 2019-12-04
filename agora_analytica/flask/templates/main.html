@@ -49,6 +49,24 @@
         </div>
     </nav>
 
+    <div class="modal" id=ehdokastiedotmodal>
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <p>testissä</p>
+            </div>
+            </div>
+        
+
+        </div>
+    </div>
+
     {% if dev %}
         {% include 'force-control.html' %}
     {% endif %}
@@ -214,6 +232,7 @@ try {
         </div>
     </footer>
 
+    
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
         integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
         crossorigin="anonymous"></script>
@@ -223,6 +242,7 @@ try {
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='main.js')}}"></script>
 </body>
 
 </html>
