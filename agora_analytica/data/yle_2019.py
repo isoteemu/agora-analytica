@@ -170,7 +170,7 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
     """
     Run processing functions for data.
     """
-    print("Processing data... ")
+    logger.debug("Processing data... ")
     df = Yle2019E(df)
 
     #Delete rows that are "empty" (those who didn't answer any questions)
