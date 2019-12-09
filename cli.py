@@ -67,9 +67,7 @@ def deploy(target, url, force=False):
 
 
 @cli.command()
-@click.option("--target", type=click.Path(file_okay=False),
-                          default=instance_path(),
-                          show_default=True)
+@click.option("--target", type=click.Path(file_okay=False))
 @click.option("--dataset-name", default="yle_2019", show_default=True)
 def download_dataset(target, dataset_name):
     """
