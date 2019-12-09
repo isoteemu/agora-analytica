@@ -7,8 +7,13 @@ console.log(data)
 console.log(data.vaalipiiri)
 console.log(data.party)*/
 
+color = node_color(data)
+document.getElementById("modalheader").style.backgroundColor = color;
+
+console.log(color)
+
 $("#candidateName").text("Name: " + data.name)
-$("#candidateNumber").text("Candidate number: " + "TODO: candidate number here ")
+$("#candidateNumber").text("Candidate number: " + "[TODO: candidate number here]")
 $("#candidateParty").text("Party: " + data.party)
 $("#candidateConstituency").text("Constituency: " + data.constituency)
 

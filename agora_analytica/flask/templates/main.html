@@ -16,8 +16,8 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
-        <a class=" navbar-brand" href="#">
+    <nav class="navbar navbar-expand-sm">
+        <a class="navbar-brand" href="#">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" style="width:100px;">
         </a>
 
@@ -98,23 +98,36 @@
                     </ul>
                 </li>
 
-                <button type="button" class="btn btn-secondary" type="submit" onclick="refreshGraph()">Hae</button>
+                <button type="button" class="btn btn-custom" onclick="refreshGraph()">Hae</button>
         </div>
     </nav>
 
-    <div class="modal fade" id=candidateInformationModal>
+    <div class="modal" id=candidateInformationModal>
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5>Candidate information:</h5>
+                <div class="modal-header" id="modalheader">
+                    <h1>Candidate Information:</h1>
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
                 </div>
 
                 <div class="modal-body">
-                    <p id="candidateName"></p>
+
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <img src="{{ url_for('static', filename='default-person.png') }}">
+                        </div>
+                        <div class="col-sm-8">
+                            <p id="candidateName"></p>
+                            <p id="candidateNumber"></p>
+                            <p id="candidateParty"></p>
+                            <p id="candidateConstituency"></p>
+                        </div>
+                    </div>
+
+                    <!--<p id="candidateName"></p>
                     <p id="candidateNumber"></p>
                     <p id="candidateParty"></p>
-                    <p id="candidateConstituency"></p>
+                    <p id="candidateConstituency"></p>-->
                 </div>
             </div>
         </div>
@@ -279,11 +292,11 @@ try {
 }
     </script>
 
-<footer class="page-footer bg-dark text-white">
+<footer class="page-footer">
         <div class="footer-copyright text-center color"> Agora Analytica 2019 -
             <a href="https://opensource.org/licenses/MIT"> MIT-lisenssi</a>
         </div>
-    </footer>
+</footer>
 
     
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
