@@ -18,6 +18,10 @@ footer {
   color: white;
 }
 
+.modal-dialog{
+  margin: 0;
+}
+
 .navbar{
   background-color:#002957;
   color: #f1563f;
@@ -32,6 +36,10 @@ footer {
   padding-top: 5px;
   padding-bottom: 5px;
   padding-right: 15px;
+}
+
+.modal-header{
+  cursor: move;
 }
 
 /*# sourceMappingURL=main.scss.css.map */

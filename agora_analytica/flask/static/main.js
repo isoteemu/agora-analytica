@@ -18,6 +18,10 @@ $("#candidateParty").text("Party: " + data.party)
 $("#candidateConstituency").text("Constituency: " + data.constituency)
 
 $("#candidateInformationModal").modal('show')
-
+$('.modal-backdrop').removeClass("modal-backdrop");
+$(".modal-dialog").draggable({
+    "handle":".modal-header",
+    "containment":"window"
+});
 })
 }
