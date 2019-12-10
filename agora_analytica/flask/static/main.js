@@ -1,7 +1,7 @@
 function show_node_info(id){
 console.log("ddd", id)
 d3.json("/api/node/"+id+".json", function(err, data){
-console.log(data)
+console.log("kkkkkkk", data)
 
 /*console.log(data.name)
 console.log(data.vaalipiiri)
@@ -13,7 +13,7 @@ document.getElementById("modalheader").style.backgroundColor = color;
 console.log(color)
 
 $("#candidateName").text("Name: " + data.name)
-$("#candidateNumber").text("Candidate number: " + "[TODO: candidate number here]")
+$("#candidateNumber").text("Candidate number: " + data.candidatenumber)
 $("#candidateParty").text("Party: " + data.party)
 $("#candidateConstituency").text("Constituency: " + data.constituency)
 

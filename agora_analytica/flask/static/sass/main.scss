@@ -1,5 +1,43 @@
+body{
+  overflow: hidden;
+}
+
+h1{
+  font-size: larger;
+}
+
 footer {
   position: absolute;
   bottom: 0;
   width: 100%;
+  background-color:#002957;
+  color: #f1563f;
+ }
+
+.modal-header{
+  color: white;
+}
+
+.modal-dialog{
+  margin: 0;
+}
+
+.navbar{
+  background-color:#002957;
+  color: #f1563f;
+}
+
+
+.btn.btn-custom{
+  background-color: #f1563f;
+  color: white;
+  border-radius: 5;
+  padding-left: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  padding-right: 15px;
+}
+
+.modal-header{
+  cursor: move;
 }
