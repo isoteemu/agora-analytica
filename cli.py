@@ -71,7 +71,7 @@ def deploy(target, url, force=False):
                           default=instance_path(),
                           show_default=True)
 @click.option("--dataset-name", default="yle_2019", show_default=True)
-def download_dataset(target, dataset_name):
+def download(target, dataset_name):
     """
     Download dataset
     """
