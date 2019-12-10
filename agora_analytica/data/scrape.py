@@ -3,15 +3,12 @@ from requests import get
 from requests.exceptions import RequestException
 from requests.exceptions import ConnectionError
 from contextlib import closing
-from bs4 import BeautifulSoup
 import json
 import os.path
 from os import getcwd
 from os import mkdir
 from pathlib import Path
-from agora_analytica import (
-    instance_path
-)
+from .utils import _instance_path
 
 
 
@@ -24,12 +21,10 @@ def json_to_file (lista,name):
     return
 
 
-#jsonToFile(cont,"constituencies")
 
 def hae_dataa():
     url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies/"
     r = get(url)
-    #cont = json.loads(r.content)
     cont = r.json()
 
     dir = instance_path()
@@ -54,7 +49,6 @@ def hae_dataa():
 
             except exceptions.ConnectionError:
                 print ('exception')
-        #continue
         
             candidate_id = candidate["id"]
 
@@ -66,12 +60,14 @@ def hae_dataa():
     url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/parties"
     r = get(url)
     cont = r.json()
-    #print(cont)
     json_to_file(cont,"parties")
     return
 
 if __name__ == "__main__":
-    hae_dataa()
+
+    text = input("Do you want to scrape data, THIS MIGHT TAKE UP TO 15 minutes Y/N? ") 
+    if (text == "Y"):
+        hae_dataa()
 
 
 
