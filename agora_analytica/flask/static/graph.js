@@ -94,9 +94,27 @@ function process_links(data) {
 
 }
 
+function graph_filter(filter_rules) {
+    console.log("Filteröidään:", filter_rules);
+    graph.svg.selectAll("g.nodes g.node").each(function(data) {
+        for(rule in filter_rules) {
+            // If any of rules matched, this node is to be hidden.
+            if(filter_rules[rule].includes(data[rule])) {
+                d3.select(this).classed("filtered", true);
+                // No need for further processing.
+                return
+            }
+
+        }
+        // No rule matched, can be shown
+        d3.select(this).classed("filtered", false);
+
+    });
+}
+
 function node_color(d) {
     let party = parties.find(function(x) {
-        if(x.itemLabel.includes(d.party)) return true; 
+        if("itemLabel" in x && x.itemLabel.includes(d.party)) return true; 
         if("itemAltLabel" in x) return x.itemAltLabel.includes(d.party)
     });
     let color = party && "sRGB_color_hex_triplet" in party ? "#"+party.sRGB_color_hex_triplet : "#CCC"
@@ -191,18 +209,17 @@ function graph_run() {
         }).on("mouseout", function() {
             d3.select(this).classed("hover", false)
         });
-        
+
     var circles = node.append("circle")
         .attr("r", graph.node_radius)
         .attr("stroke", node_color)
         .attr("fill", (d) => "url(#node-"+ d.id +"-image)")
-        .on("click", function(d) {
-            console.log(d);
-            show_node_info(d.id);
-            /*let g = d3.select(this.parentElement);
+        .on("click", function(obj) {
+            show_node_info(obj.id)
+            let g = d3.select(this.parentElement);
 
             var toggle = !g.classed("active");
-            g.classed("active", toggle);*/
+            g.classed("active", toggle);
         });
 
     const topics = graph.topics;
