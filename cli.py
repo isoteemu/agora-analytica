@@ -139,8 +139,9 @@ def build(target, method, dataset_name, limit: int = 50):
         "name": row.get("name"),
         "party": row.get("party"),
         "image": row.get("image", None),
-        "constituency": row.get("vaalipiiri")
-    } for idx, row in df.iterrows()]
+        "constituency": row.get("vaalipiiri"),
+        "number": int(row.get("number", -1))
+    } for idx, row in df.replace(np.NaN, None).iterrows()]
 
     data_links = [{
         "source": int(i),
@@ -175,13 +176,13 @@ def build_pages(target):
     click.echo("[DONE]")
     return
 
+
 def _build_pages(target):
     target.mkdir(exist_ok=True)
     # Generate about page from README.md
     from markdown import markdownFromFile
     markdownFromFile(input="README.md", output=str(target / "about.html"))
 
-    pass
 
 @cli.command()
 @click.option("--target", type=click.Path(file_okay=False),
