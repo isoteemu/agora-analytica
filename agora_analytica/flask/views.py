@@ -6,6 +6,7 @@ from flask import (
     make_response
 )
 
+from . import instance_path
 from agora_analytica.data import yle_2019
 bp = Blueprint("", __name__)
 
@@ -14,6 +15,7 @@ def app_init(app):
     """ Set up module for Flask app """
     with app.app_context():
         app.register_blueprint(bp)
+        app.jinja_loader.searchpath.append(instance_path() / "pages")
 
 
 @bp.route('/')

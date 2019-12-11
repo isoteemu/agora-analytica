@@ -293,11 +293,22 @@ try {
     </script>
 
 <footer class="page-footer">
-        <div class="footer-copyright text-center color"> Agora Analytica 2019 -
-            <a href="https://opensource.org/licenses/MIT"> MIT-lisenssi</a>
-        </div>
+    <div class="footer-copyright text-center color"><a href="https://github.com/Agora-Analytica/prototyyppi/blob/master/README.md" data-toggle="modal" data-target="#about">{{_("About")}}</a></div>
 </footer>
 
+{%block about %}
+<article class="modal" id="about">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                {%include 'about.html' %}
+            </div>
+        </div>
+
+
+    </div>
+</article>
+{%endblock%}
     
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"
         integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
