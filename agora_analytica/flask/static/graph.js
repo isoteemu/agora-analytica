@@ -214,6 +214,11 @@ function graph_run() {
             .data(topics.filter(function(x) { return x.target == g.data()[0].id }))
             .enter().append("g")
                 .classed("topic", true)
+                .on("click", function(d) {
+                    //const target = graph.nodes.find((x) => x.id == d.target)
+                    //console.log(graph.zoom.translateBy(graph_layer, target.x, target.y));
+                    //console.log(graph_layer.call(graph.zoom).translate(target.x, target.y));
+                })
                 .append("text")
                     .text((d) => d.term)
     });
@@ -221,15 +226,25 @@ function graph_run() {
     node.on("mouseover.reposition_topic", function() {
         /* Topic texts are hidden by default, and position is not updated for them in simulation.
            Update positions by event trigger. */
-        d3.select(this).selectAll("g.topic").each(function(e){align_topic_texts(this)})
-
-        const self = d3.select(this).data()[0]
-        graph.links.filter(function(d) { return d.source == self || d.target == self }).forEach(function(e) {
-            console.log(d3.select(e.target))
-            if(self == d3.select(e.target))
-                d3.select(each.target).classed("related", True)
-        });
+        //d3.select(this).selectAll("g.topic").each(function(e){align_topic_texts(this)})
+        redraw();
     });
+
+    node.on("mouseover.related", function() {
+        // On mouseover, hilight also every related node
+        const self = d3.select(this).data()[0]
+        // Reset previous related
+        node.classed("related", false);
+
+        graph.links.forEach(function(link) {
+            if (link.target.id == self.id) {
+                d3.select("#node-"+link.source.id).classed("related", true);
+            } else if(link.source.id == self.id) {
+                d3.select("#node-"+link.target.id).classed("related", true);
+            }
+        });
+        redraw();
+    })
 
     var labels = node.append("text")
         .text(function(d) {
@@ -242,21 +257,29 @@ function graph_run() {
     node.append("title")
         .text(function(d) { return d.id+": "+d.name+"\n"+d.party+"\n"+d.constituency; });
 
-
-            
-    function ticked() {
-        graph.svg.classed("cooled", this.alpha() <= Math.max(this.alphaMin(), 0.05))
-
+    function redraw() {
         link
             .attr("x1", function(d) { return d.source.x; })
             .attr("y1", function(d) { return d.source.y; })
             .attr("x2", function(d) { return d.target.x; })
-            .attr("y2", function(d) { return d.target.y; });
+            .attr("y2", function(d) { return d.target.y; })
+            .attr("class", function(d) {
+                if (d3.select("#node-"+d.target.id).classed("hover") || d3.select("#node-"+d.source.id).classed("hover"))
+                    return "hover"
+                else
+                    return "";
+            });
 
         node.attr("transform", function(d) {
             return "translate(" + d.x + "," + d.y + ")";
         })
         node.selectAll("g.topic").each(function(e){ align_topic_texts(this)})
+    }
+
+    function ticked() {
+        graph.svg.classed("cooled", this.alpha() <= Math.max(this.alphaMin(), 0.05))
+        redraw();
+
     }
 
     function align_topic_texts(el) {
