@@ -37,7 +37,7 @@ graph.reset = function() {
         .radius(graph.node_radius)
         .strength(0.7 * graph.collide)
 
-    graph.simulation.alphaDecay((graph.decay) ? graph.alpha_decay : 0 )
+    graph.simulation.alphaDecay( 0.01 * graph.decay)
 
     graph.svg.selectAll("defs image.node-image")
         .attr("width", graph.node_radius * 2)
@@ -121,7 +121,6 @@ function graph_run() {
         .append("circle")
             .attr("cx", 0)
             .attr("cy", 0)
-            // .attr("r", graph.node_radius)
 
     for(n of nodes) {
         defs.append("pattern")
@@ -144,7 +143,7 @@ function graph_run() {
     let graph_layer = graph.svg.call(graph.zoom).append("g").attr("id", "graph_layer");
 
     graph.simulation = d3.forceSimulation();
-    graph.alpha_decay = graph.simulation.alphaDecay()
+    graph.alpha_decay = 1. - Math.pow(0.001, 1/(300 + (nodes.length * 2)))
 
     let force_link = d3.forceLink()
         .distance(function(d) {
@@ -187,8 +186,8 @@ function graph_run() {
         .on("mouseover", function() {
             // SVG uses ordered rendering. Move focused element to top
             // of node list.
-            let e = d3.select(this).raise();
-            e.classed("hover", true)
+            let e = d3.select(this)
+            e.classed("hover", true).raise();
         }).on("mouseout", function() {
             d3.select(this).classed("hover", false)
         });
@@ -215,15 +214,37 @@ function graph_run() {
             .data(topics.filter(function(x) { return x.target == g.data()[0].id }))
             .enter().append("g")
                 .classed("topic", true)
+                .on("click", function(d) {
+                    //const target = graph.nodes.find((x) => x.id == d.target)
+                    //console.log(graph.zoom.translateBy(graph_layer, target.x, target.y));
+                    //console.log(graph_layer.call(graph.zoom).translate(target.x, target.y));
+                })
                 .append("text")
                     .text((d) => d.term)
     });
 
-    /* Topic texts are hidden by default, and position is not updated for them in simulation.
-       Update positions by event trigger. */
-    node.on("mouseover.topic", function() {
-        d3.select(this).selectAll("g.topic").each(function(e){align_topic_texts(this)})
+    node.on("mouseover.reposition_topic", function() {
+        /* Topic texts are hidden by default, and position is not updated for them in simulation.
+           Update positions by event trigger. */
+        //d3.select(this).selectAll("g.topic").each(function(e){align_topic_texts(this)})
+        redraw();
     });
+
+    node.on("mouseover.related", function() {
+        // On mouseover, hilight also every related node
+        const self = d3.select(this).data()[0]
+        // Reset previous related
+        node.classed("related", false);
+
+        graph.links.forEach(function(link) {
+            if (link.target.id == self.id) {
+                d3.select("#node-"+link.source.id).classed("related", true);
+            } else if(link.source.id == self.id) {
+                d3.select("#node-"+link.target.id).classed("related", true);
+            }
+        });
+        redraw();
+    })
 
     var labels = node.append("text")
         .text(function(d) {
@@ -234,21 +255,31 @@ function graph_run() {
         .attr('y', graph.node_radius);
 
     node.append("title")
-        .text(function(d) { return d.id+": "+d.name+"\n"+d.party; });
+        .text(function(d) { return d.id+": "+d.name+"\n"+d.party+"\n"+d.constituency; });
 
-    function ticked() {
-        graph.svg.classed("cooled", this.alpha() <= this.alphaMin())
-
+    function redraw() {
         link
             .attr("x1", function(d) { return d.source.x; })
             .attr("y1", function(d) { return d.source.y; })
             .attr("x2", function(d) { return d.target.x; })
-            .attr("y2", function(d) { return d.target.y; });
+            .attr("y2", function(d) { return d.target.y; })
+            .attr("class", function(d) {
+                if (d3.select("#node-"+d.target.id).classed("hover") || d3.select("#node-"+d.source.id).classed("hover"))
+                    return "hover"
+                else
+                    return "";
+            });
 
         node.attr("transform", function(d) {
             return "translate(" + d.x + "," + d.y + ")";
         })
         node.selectAll("g.topic").each(function(e){ align_topic_texts(this)})
+    }
+
+    function ticked() {
+        graph.svg.classed("cooled", this.alpha() <= Math.max(this.alphaMin(), 0.05))
+        redraw();
+
     }
 
     function align_topic_texts(el) {
