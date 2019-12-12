@@ -8,28 +8,22 @@ import os.path
 from os import getcwd
 from os import mkdir
 from pathlib import Path
-from .utils import _instance_path
+from .interpolation.combine import instancepath
 
 
 
+def json_to_file(lista, name):
 
-def json_to_file (lista,name):
+    with open(instancepath / f"{name}.json", "x") as f:
+        json.dump(lista, f, ensure_ascii=False)
 
-    f = open(os.path.join(instance_path(), f"{name}.json"),"w",encoding='utf-8')
-    json.dump(lista,f, ensure_ascii=False)
-    f.close()
     return
-
 
 
 def hae_dataa():
     url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies/"
     r = get(url)
     cont = r.json()
-
-    dir = instance_path()
-    if not os.path.exists(dir):
-        os.mkdir(dir)
 
     json_to_file(cont,"constituencies")
 
@@ -44,19 +38,6 @@ def hae_dataa():
             cont3 = r.json()
             json_to_file(cont3,"candidate" + str(candidate["id"]))
 
-            try:
-                pic= get("https://ehdokaskone.yle.webscale.fi/" + candidate["image"], timeout=10)
-
-            except exceptions.ConnectionError:
-                print ('exception')
-        
-            candidate_id = candidate["id"]
-
-            fp = open(os.path.join(instance_path(), f"{candidate_id}.jfif"),'wb')
-            fp.write(pic.content)
-            fp.close()
-
-
     url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/parties"
     r = get(url)
     cont = r.json()
@@ -66,7 +47,7 @@ def hae_dataa():
 if __name__ == "__main__":
 
     text = input("Do you want to scrape data, THIS MIGHT TAKE UP TO 15 minutes Y/N? ") 
-    if (text == "Y"):
+    if (text.upper() == "Y"):
         hae_dataa()
 
 

@@ -3,4 +3,54 @@ footer {
   bottom: 0;
   width: 100%; }
 
+#candidateInformationModal #candidateRelated .candidate {
+  cursor: pointer;
+  display: inline-block;
+  margin: 0rem 1rem 0rem 1rem; }
+  #candidateInformationModal #candidateRelated .candidate .name {
+    display: none; }
+  #candidateInformationModal #candidateRelated .candidate .topic-bubble {
+    margin-left: 1rem;
+    margin-bottom: 0.3rem;
+    border-radius: 3px;
+    background: #fff;
+    border: 4px solid #002957;
+    padding: 0 0.3rem;
+    text-align: center;
+    color: #000;
+    position: relative; }
+    #candidateInformationModal #candidateRelated .candidate .topic-bubble::before {
+      content: "";
+      width: 0px;
+      height: 0px;
+      position: absolute;
+      border-left: 10px solid #002957;
+      border-right: 10px solid transparent;
+      border-top: 10px solid #002957;
+      border-bottom: 10px solid transparent;
+      left: 20px;
+      bottom: -23px; }
+    #candidateInformationModal #candidateRelated .candidate .topic-bubble::after {
+      content: "";
+      width: 0px;
+      height: 0px;
+      position: absolute;
+      border-left: 8px solid #fff;
+      border-right: 8px solid transparent;
+      border-top: 8px solid #fff;
+      border-bottom: 8px solid transparent;
+      left: 24px;
+      bottom: -13px; }
+  #candidateInformationModal #candidateRelated .candidate img.node {
+    transition: all 0.5s;
+    border-radius: 50%;
+    border-style: solid;
+    border-width: 5px;
+    border-color: #ccc;
+    width: 64px;
+    max-height: 64px;
+    filter: grayscale(50%); }
+    #candidateInformationModal #candidateRelated .candidate img.node:hover {
+      filter: grayscale(0%); }
+
 /*# sourceMappingURL=main.scss.css.map */
