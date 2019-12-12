@@ -7,6 +7,7 @@ from io import BytesIO
 from time import gmtime, strftime
 from pathlib import Path
 from zipfile import ZipFile
+import re
 
 from agora_analytica import (
     instance_path,
@@ -69,6 +70,11 @@ def deploy(target: Path, url: str, force=False):
     """
     if url is None:
         raise click.BadParameter("Please set instance asset url in INSTANCE_URL enviroment variable")
+    elif not re.match(r'^\w+://.*', url):
+        url = f"http://{url}"
+
+    if not isinstance(target, Path):
+        target = Path(target)
 
     req = urllib.request.Request(url)
 
