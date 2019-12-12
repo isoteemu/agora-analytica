@@ -135,12 +135,14 @@ function graph_run() {
                 .attr("height", graph.node_radius * 2)
     }
 
+    let graph_layer = graph.svg.append("g").attr("id", "graph_layer");
+    
     graph.zoom = d3.zoom()
         .on("zoom", function () {
             graph_layer.attr("transform", d3.event.transform)
         });
 
-    let graph_layer = graph.svg.call(graph.zoom).append("g").attr("id", "graph_layer");
+    graph.svg.call(graph.zoom)
 
     graph.simulation = d3.forceSimulation();
     graph.alpha_decay = 1. - Math.pow(0.001, 1/(300 + (nodes.length * 2)))
@@ -197,12 +199,11 @@ function graph_run() {
         .attr("stroke", node_color)
         .attr("fill", (d) => "url(#node-"+ d.id +"-image)")
         .on("click", function(d) {
-            console.log(d);
             show_node_info(d.id);
-            /*let g = d3.select(this.parentElement);
+            // let g = d3.select(this.parentElement);
 
-            var toggle = !g.classed("active");
-            g.classed("active", toggle);*/
+            // var toggle = !g.classed("active");
+            // g.classed("active", toggle);
         });
 
     const topics = graph.topics;
@@ -215,24 +216,34 @@ function graph_run() {
             .enter().append("g")
                 .classed("topic", true)
                 .on("click", function(d) {
-                    //const target = graph.nodes.find((x) => x.id == d.target)
-                    //console.log(graph.zoom.translateBy(graph_layer, target.x, target.y));
-                    //console.log(graph_layer.call(graph.zoom).translate(target.x, target.y));
+                    const source = graph.nodes.find((x) => x.id == d.source)
+                    const target = graph.nodes.find((x) => x.id == d.target)
+
+                    // Move zoom so new node is in same position as old node was.
+                    const t = d3.zoomTransform(graph.svg.node())
+                    t.x -= (source.x - target.x) * t.k;
+                    t.y -= (source.y - target.y) * t.k;
+                    
+                    graph.svg.call(graph.zoom.transform, t);
+                    focus_node(d3.select("#node-"+target.id));
+
                 })
                 .append("text")
                     .text((d) => d.term)
     });
 
-    node.on("mouseover.reposition_topic", function() {
-        /* Topic texts are hidden by default, and position is not updated for them in simulation.
-           Update positions by event trigger. */
-        //d3.select(this).selectAll("g.topic").each(function(e){align_topic_texts(this)})
-        redraw();
-    });
 
-    node.on("mouseover.related", function() {
+    node.on("mouseover.focus", function() {
+        focus_node(this);
         // On mouseover, hilight also every related node
-        const self = d3.select(this).data()[0]
+        redraw();
+    })
+
+    node.append("title")
+        .text(function(d) { return d.id+": "+d.name+"\n"+d.party+"\n"+d.constituency; });
+
+    function focus_node(el) {
+        const self = d3.select(el).data()[0]
         // Reset previous related
         node.classed("related", false);
 
@@ -244,19 +255,7 @@ function graph_run() {
             }
         });
         redraw();
-    })
-
-    var labels = node.append("text")
-        .text(function(d) {
-            return d.name + "\r\n(" + d.party +")";
-        })
-        .classed("node-info", true)
-        .attr('x', graph.node_radius)
-        .attr('y', graph.node_radius);
-
-    node.append("title")
-        .text(function(d) { return d.id+": "+d.name+"\n"+d.party+"\n"+d.constituency; });
-
+    }
     function redraw() {
         link
             .attr("x1", function(d) { return d.source.x; })
@@ -282,6 +281,9 @@ function graph_run() {
 
     }
 
+    /** 
+     * Update topics to follow node link directions.
+    */
     function align_topic_texts(el) {
         d3.select(el).attr("transform", function(d) {
 
@@ -307,10 +309,10 @@ function graph_run() {
         });
     }
 
-    node.call(d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended))
+    // node.call(d3.drag()
+    //     .on("start", dragstarted)
+    //     .on("drag", dragged)
+    //     .on("end", dragended))
 
     function dragstarted(d) {
         if (!d3.event.active) graph.simulation.alphaTarget(0.3).restart();
