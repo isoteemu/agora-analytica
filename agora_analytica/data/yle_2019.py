@@ -6,6 +6,7 @@ YLE EDUSKUNTAVAALIT 2019
 Functions for processing data from Yle Eduskuntavaalit 2019.
 
 """
+import os
 
 import logging
 # `BytesIO` tarjoaa liiman, jolla voidaan virtuaalisena tiedostona antaa
@@ -148,10 +149,36 @@ def download_dataset(filepath=DATASET_PATH, url=DATASET_URL, **kwargs) -> pd.Dat
 
     return data
 
+def delete_empty_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Delete rows that are "empty" (those who didn't answer any questions) 
+    Done by checking if all the answers on a given row are either "-" or float type (nan value is float type)
+    Also counts new indexes after deleting rows, so there isn't missing in-between index numbers
+    """
+    
+    df2 = df.loc[:, 'Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.':'On oikein nähdä vaivaa sen eteen, ettei vahingossakaan loukkaa toista.'].join(df.loc[:, 'Uusimaa. Kaatolupia on myönnettävä nykyistä enemmän susikannan rajoittamiseksi.':])
+    for i, row in df2.iterrows():
+        isnan = True
+        isempty = True
+        j = 0
+        val = df2.loc[i,:].values
+        lenght = len(row)
+        while ((isnan or isempty) and (j < lenght)):
+            isnan = isinstance(row[j], float)
+            isempty = row[j] == "-"
+            j += 1
+        if (isnan or isempty):
+            df = df.drop(i)
+
+    # Make new indexes after deleting rows
+    df.reset_index(drop=True, inplace=True)
+    df.columns = df.columns.map(_clean_column)
+    
+    return df
 
 def load_dataset(filename: str = DATASET_PATH) -> pd.DataFrame:
     """ Read dataset """
-
+    
     # Warn if dataset has been previously opened
     key = f"{__name__}.{filename}"
     dataset_loaded = globals().setdefault(key, False)
@@ -170,54 +197,37 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
     """
     Run processing functions for data.
     """
-    print("Processing data... ")
+    logger.debug("Processing data... ")
     df = Yle2019E(df)
 
-    #Delete rows that are "empty" (those who didn't answer any questions)
-    #Done by checking if all the answers on a given row are either "-" or float type (nan value is float type)
-    df2 = df.loc[:, 'Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.':]
-    for i, row in df2.iterrows():
-        isnan = True
-        isempty = True
-        j = 0
-        val = df2.loc[i,:].values
-        lenght = len(row)
-        while ((isnan or isempty) and (j < lenght)):
-            isnan = isinstance(row[j], float)
-            isempty = row[j] == "-"
-            j += 1
-        if (isnan or isempty):
-            df = df.drop(i)
 
-    # Make new indexes after deleting rows
-    df.reset_index(drop=True, inplace=True)
-    df.columns = df.columns.map(_clean_column)
+    df = delete_empty_rows(df)
 
 
-    # Add names, if data has none.
-    if "name" not in df.columns:
-        names = pd.Series(generate_names(df.shape[0]), name="name")
-        df = df.assign(name=names)
-
-
-    #df = Yle2019E(df)
     df.columns = df.columns.map(_clean_column)
     df = df.rename(columns={
         "puolue": "party",
-        "nimi": "name"
     })
+
 
     #attach scraped data to dataframe
     df = attach_data(df)
 
     # Replace with np.NaN, as Yle is using "-" to indicate skipped and no opinion
     # values
-    df = df.replace("-", np.NaN)
+    df = (df.replace("-", np.NaN))
+
+
+    #deleting the leftover candidates we can't identify (only 2 at this point)
+    l = 0
+    for i, row in df.iterrows():
+        if isinstance(row['number'], float):
+            l += 1
+            df = df.drop(i)
 
 
     df = _convert_linear_into_int(df)
-    print("[data processed]")
-    #print(df)
+    logger.debug("Data Processed")
     return df
 
 
