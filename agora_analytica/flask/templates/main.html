@@ -106,7 +106,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header" id="modalheader">
-                    <h1>Candidate Information:</h1>
+                    <h1>{{_("Candidate Information")}}</h1>
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
                 </div>
 
@@ -122,6 +122,16 @@
                             <p id="candidateParty"></p>
                             <p id="candidateConstituency"></p>
                         </div>
+                    </div>
+                    <h3>{{_("Similar candidates")}}</h3>
+                    <div class="container" id="candidateRelated">
+                        <template id="candidateRelatedTemplate">
+                            <div class="candidate">
+                                <div class="topic-bubble topic"></div>
+                                <img class="node" />
+                                <h4 class="name"></h4>
+                            </div>
+                        </template>
                     </div>
 
                     <!--<p id="candidateName"></p>
