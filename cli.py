@@ -91,7 +91,7 @@ def download(target, dataset_name):
 @click.option("--limit", default=50)
 @click.option("--number-of-topics", type=int,
                                     help="Number of topics for text analysis. Defaults to approximation",
-                                    default=settings.get('build', 'number_of_topics', fallback="auto"))
+                                    default=settings.get('build', 'number_of_topics', fallback=-1))
 def build(target, method: list, dataset_name, limit: int, number_of_topics):
     """
     Build page.
@@ -117,7 +117,7 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
 
     click.echo("Analyzing text ... ", nl=False)
 
-    if number_of_topics.lower() == "auto":
+    if number_of_topics == -1:
         # Using squareroot seems to provide pretty good default
         number_of_topics = settings.getint("build", "number_of_topics", fallback=np.sqrt(limit))
     number_of_topics = int(number_of_topics)
