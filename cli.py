@@ -178,8 +178,6 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
 
         talkinpoints[a_idx] = topics.find_talkingpoint(texts_df.loc[a_idx])
 
-    print(talkinpoints)
-
     click.echo("[DONE]")
 
     click.echo("Generating structures ... ", nl=False)
