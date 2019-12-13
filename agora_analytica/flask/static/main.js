@@ -18,6 +18,7 @@ $("#candidateName").text("Name: " + data.name)
 $("#candidateNumber").text("Candidate number: " + data.number)
 $("#candidateParty").text("Party: " + data.party)
 $("#candidateConstituency").text("Constituency: " + data.constituency)
+$("#candidateTalkinpoint").text(data.talkinpoint)
 
 $("#candidateInformationModal").modal('show')
 $('.modal-backdrop').removeClass("modal-backdrop");

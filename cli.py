@@ -165,14 +165,20 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
 
     n = texts_df.shape[0]
 
+    talkinpoints = {}
+
     for a in range(n):
+        a_idx = texts_df.index[a]
         for b in range(a + 1, n):
-            a_idx = texts_df.index[a]
             b_idx = texts_df.index[b]
             r = topics.compare_rows(texts_df, a_idx, b_idx)
             if r:
                 words[(a_idx, b_idx)] = r[0][1]
                 words[(b_idx, a_idx)] = r[1][1]
+
+        talkinpoints[a_idx] = topics.find_talkingpoint(texts_df.loc[a_idx])
+
+    print(talkinpoints)
 
     click.echo("[DONE]")
 
@@ -183,7 +189,8 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
         "party": row.get("party"),
         "image": row.get("image", None),
         "constituency": row.get("vaalipiiri"),
-        "number": int(row.get("number", -1))
+        "number": int(row.get("number", -1)),
+        "talkinpoint": talkinpoints.get(int(idx), None)
     } for idx, row in df.replace(np.NaN, None).iterrows()]
 
     data_links = [{
