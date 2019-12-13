@@ -241,7 +241,6 @@ class TextTopics():
         """ Cached wrapper for `VoikkoTokenizer.tokenize()` """
         return self.tokenizer().tokenize(text)
 
-
     def find_talkingpoint(self, candidate: pd.Series) -> str:
         """ Find most suitable sentence from text """
         texts = tuple(candidate.dropna())
@@ -268,6 +267,8 @@ class TextTopics():
 
         # cleanup sentences.
         sentences = tuple(set(filter(lambda x: len(x) > self.min_sentence_length, map(str.strip, sentences))))
+        if len(sentences) == 0:
+            return None
 
         # Find most topical sentence.
         tl_dr = []
