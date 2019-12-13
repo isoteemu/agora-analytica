@@ -67,11 +67,9 @@ def deploy(target, url, force=False):
 
 
 @cli.command()
-@click.option("--target", type=click.Path(file_okay=False),
-                          default=instance_path(),
-                          show_default=True)
+@click.option("--target", type=click.Path(file_okay=False))
 @click.option("--dataset-name", default="yle_2019", show_default=True)
-def download_dataset(target, dataset_name):
+def download(target, dataset_name):
     """
     Download dataset
     """
@@ -91,11 +89,15 @@ def download_dataset(target, dataset_name):
                           default="linear", multiple=True)
 @click.option("--dataset-name", default="yle_2019", show_default=True)
 @click.option("--limit", default=50)
-def build(target, method, dataset_name, limit: int = 50):
+@click.option("--number-of-topics", type=int,
+                                    help="Number of topics for text analysis. Defaults to approximation",
+                                    default=settings.get('build', 'number_of_topics', fallback=-1))
+def build(target, method: list, dataset_name, limit: int, number_of_topics):
     """
     Build page.
 
     :param target: Target file
+    :param method: List of methods to use.
     :param limit: Limit processing into N candidates.
     """
 
@@ -115,8 +117,15 @@ def build(target, method, dataset_name, limit: int = 50):
 
     click.echo("Analyzing text ... ", nl=False)
 
+    if number_of_topics == -1:
+        # Using squareroot seems to provide pretty good default
+        number_of_topics = settings.getint("build", "number_of_topics", fallback=np.sqrt(limit))
+    number_of_topics = int(number_of_topics)
+    settings.set("build", "number_of_topics", str(number_of_topics))
+
+    click.echo(f"Topics: {number_of_topics} ", nl=False)
+
     texts_df = df.text_answers().sort_index()
-    number_of_topics = settings.getint('build', 'number_of_topics', fallback=10)
     visualization = settings.getboolean('build', 'generate_visualization', fallback=debug)
 
     topics = TextTopics(texts_df, number_topics=number_of_topics, generate_visualization=visualization)
@@ -126,12 +135,12 @@ def build(target, method, dataset_name, limit: int = 50):
 
     for a in range(n):
         for b in range(a + 1, n):
-            i = texts_df.index[a]
-            l = texts_df.index[b]
-            r = topics.compare_rows(texts_df, i, l)
+            a_idx = texts_df.index[a]
+            b_idx = texts_df.index[b]
+            r = topics.compare_rows(texts_df, a_idx, b_idx)
             if r:
-                words[(i, l)] = r[0][1]
-                words[(l, i)] = r[1][1]
+                words[(a_idx, b_idx)] = r[0][1]
+                words[(b_idx, a_idx)] = r[1][1]
 
     click.echo("[DONE]")
 
@@ -141,8 +150,9 @@ def build(target, method, dataset_name, limit: int = 50):
         "name": row.get("name"),
         "party": row.get("party"),
         "image": row.get("image", None),
-        "constituency": row.get("vaalipiiri")
-    } for idx, row in df.iterrows()]
+        "constituency": row.get("vaalipiiri"),
+        "number": int(row.get("number", -1))
+    } for idx, row in df.replace(np.NaN, None).iterrows()]
 
     data_links = [{
         "source": int(i),
@@ -153,6 +163,9 @@ def build(target, method, dataset_name, limit: int = 50):
     } for i, d, l in distances.values]
     click.echo("[DONE]")
 
+    # Build static pages
+    _build_pages(target / "pages")
+
     click.echo("Writing data ... ", nl=False)
     _write("nodes", data_nodes, target)
     _write("links", data_links, target)
@@ -160,6 +173,26 @@ def build(target, method, dataset_name, limit: int = 50):
     with cfg.open('w') as f:
         settings.write(f, space_around_delimiters=True)
     click.echo("[DONE]")
+
+@cli.command()
+@click.option("--target", type=click.Path(file_okay=False),
+                          default=instance_path() / "pages",
+                          show_default=True)
+def build_pages(target):
+    """
+    Build static pages.
+    """
+    click.echo("Writing pages ... ", nl=False)
+    _build_pages(target)
+    click.echo("[DONE]")
+    return
+
+
+def _build_pages(target):
+    target.mkdir(exist_ok=True)
+    # Generate about page from README.md
+    from markdown import markdownFromFile
+    markdownFromFile(input="README.md", output=str(target / "about.html"))
 
 
 @cli.command()
@@ -177,7 +210,7 @@ def build_parties(target, dataset_name):
     dataset = importlib.import_module(f".{dataset_name}", "agora_analytica.data")
 
     df = dataset.load_dataset()
-    answers = dataset.linear_answers(df)
+    answers = df.linear_answers()
 
     distance_matrix = party_distances(df, answers)
 

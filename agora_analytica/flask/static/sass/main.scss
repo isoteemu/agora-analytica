@@ -3,3 +3,72 @@ footer {
   bottom: 0;
   width: 100%;
 }
+
+#candidateInformationModal {
+  #candidateRelated {
+    .candidate {
+
+      $bubble-color: #fff;
+      // Sininen on yliopiston väri.
+      $bubble-border-color: #002957;
+
+      cursor: pointer;
+      display: inline-block;
+      margin: 0rem 1rem 0rem 1rem;
+      .name {
+        display: none;
+      }
+      .topic-bubble {
+        margin-left: 1rem;
+        margin-bottom: 0.3rem;
+        border-radius: 3px;
+        background: $bubble-color;
+        border: 4px solid $bubble-border-color;
+        padding: 0 0.3rem;
+        text-align: center;
+        color: #000;
+        position: relative;
+        z-index: 1;
+        &::before {
+          // Alanuoli. Tämä toimii reunuksena
+          content: "";
+          width: 0px;
+          height: 0px;
+          position: absolute;
+          border-left: 10px solid $bubble-border-color;
+          border-right: 10px solid transparent;
+          border-top: 10px solid $bubble-border-color;
+          border-bottom: 10px solid transparent;
+          left: 20px;
+          bottom: -23px;
+        }
+        &::after {
+          // Toinen alanuoli, joka menee edellä olevan päälle.
+          content: "";
+          width: 0px;
+          height: 0px;
+          position: absolute;
+          border-left: 8px solid $bubble-color;
+          border-right: 8px solid transparent;
+          border-top: 8px solid $bubble-color;
+          border-bottom: 8px solid transparent;
+          left: 24px;
+          bottom: -13px;
+        }
+      }
+      img.node {
+        transition: all 0.3s;
+        border-radius: 50%;
+        border-style: solid;
+        border-width: 5px;
+        border-color: #ccc;
+        width: 64px;
+        max-height: 64px;
+        filter:grayscale(50%);
+        &:hover {
+          filter:grayscale(0%);
+        }
+      }
+    }
+  }
+}

@@ -26,6 +26,9 @@ import re
 from .utils import _instance_path, generate_names
 from . import DataSetInstance
 from .interpolation.combine import attach_data
+from .scrape import hae_dataa
+
+from .. import config
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,8 @@ DATASET_NAME = "Avoin_data_eduskuntavaalit_2019_valintatiedot.csv"
 
 # Dataset default path
 DATASET_PATH = _instance_path(DATASET_NAME)
+
+Config = config()
 
 # column to use for dataframe index.
 INDEX = "key"
@@ -144,8 +149,18 @@ def download_dataset(filepath=DATASET_PATH, url=DATASET_URL, **kwargs) -> pd.Dat
         # Puretaan haluttu tiedosto, ja kääritään pandan dataframen ympärille.
         data = pd.read_csv(BytesIO(pakattu_tiedosto.read(DATASET_NAME)))
 
+        # Add names, if data has none.
+        if "name" not in data.columns:
+            logger.debug("Names are missing. Generating fake names.")
+            names = pd.Series(generate_names(data.shape[0]), name="name")
+            data = data.assign(name=names)
+
         data.to_csv(filepath, index_label=INDEX)
-        logger.debug("File downloaded as:", filepath)
+        logger.debug("File downloaded as: %s", filepath)
+
+    # Scrape extra bits.
+    if Config.getboolean("build", "allow_dirty", fallback=False):
+        hae_dataa()
 
     return data
 
@@ -211,7 +226,12 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
 
 
     #attach scraped data to dataframe
-    df = attach_data(df)
+    if Config.getboolean("build", "allow_dirty", fallback=False):
+        try:
+            df = attach_data(df)
+        except Exception as e:
+            logger.exception(e)
+            logger.warning("Could not extend dataset with scraped data.")
 
     # Replace with np.NaN, as Yle is using "-" to indicate skipped and no opinion
     # values
@@ -224,7 +244,6 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
         if isinstance(row['number'], float):
             l += 1
             df = df.drop(i)
-
 
     df = _convert_linear_into_int(df)
     logger.debug("Data Processed")

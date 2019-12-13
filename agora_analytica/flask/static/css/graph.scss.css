@@ -16,22 +16,31 @@ svg.graph {
   svg.graph .nodes .node circle {
     stroke-width: 4px; }
   svg.graph .links line {
-    stroke: #737373; }
+    transition: all 0.5s;
+    stroke: #beb7b7;
+    stroke-width: 1px; }
+    svg.graph .links line.hover {
+      stroke-width: 1.5px;
+      stroke: #4b4b4b; }
   svg.graph .nodes .node .topic {
-    transition: all 0.3s;
+    transition: all 0.5s;
     font-size: 0.3em;
     fill: #fff;
     filter: drop-shadow(0 0 0.05em black);
     display: none;
     opacity: 0; }
   svg.graph .nodes .node circle {
-    transition: all 0.3s;
+    transition: all 0.5s;
     filter: grayscale(0) blur(0) drop-shadow(0 1px 5px rgba(0, 0, 5, 0.233)); }
   svg.graph .nodes:hover .node.hover circle {
     filter: grayscale(0) blur(0) drop-shadow(0 1px 5px rgba(0, 0, 5, 0.233)); }
   svg.graph .nodes:hover .node.hover .topic {
     opacity: 1;
-    display: inline; }
+    display: inline;
+    cursor: pointer; }
+  svg.graph .nodes:hover .node.related circle {
+    filter: grayscale(0) blur(0) drop-shadow(0 1px 5px rgba(0, 0, 5, 0.233)) !important;
+    stroke-width: 4.8px; }
   svg.graph .nodes:hover .node:not(.hover) circle {
     filter: grayscale(100%) blur(1px) drop-shadow(0 1px 5px rgba(0, 0, 5, 0.233)); }
   svg.graph .nodes .node.active circle {

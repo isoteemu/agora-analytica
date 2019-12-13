@@ -8,10 +8,11 @@ import os.path
 from os import getcwd
 from os import mkdir
 from pathlib import Path
+#from .interpolation.combine import instancepath
 from .utils import instance_path
-from datetime import datetime
 
-path = os.path.join(instance_path(), "scraped")
+path = os.path.join(instance_path(), "yle_scrape")
+#path = instancepath
 if not (os.path.exists(path)):
     mkdir(path)
 
@@ -77,9 +78,6 @@ def hae_dataa():
     possible_not_foundcandidates = list(set(range(1, 3000)) - set(found_candidates))
     print(possible_not_foundcandidates)
 
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)
 
     # getting leftover candidates that arent for some reason listed in their constituent's candidate list
     while len(possible_not_foundcandidates) > 0:
@@ -95,14 +93,14 @@ def hae_dataa():
     url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/parties"
     r = get(url)
     cont = r.json()
-    json_to_file(cont, "parties2")
+    json_to_file(cont, "parties")
     return
 
 
 if __name__ == "__main__":
 
-    text = input("Do you want to scrape data, THIS MIGHT TAKE UP TO 35 minutes Y/N? (case sensitive)") 
-    if (text == "Y"):
+    text = input("Do you want to scrape data, THIS MIGHT TAKE UP TO 35 minutes Y/N? ") 
+    if (text.upper() == "Y"):
         hae_dataa()
 
 

@@ -7,14 +7,16 @@ import json
 from ..utils import instance_path
 from ..scrape import hae_dataa
 
+instancepath = instance_path() / "yle_scrape"
+instancepath.mkdir(exist_ok=True)
 
-instancepath = os.path.join(instance_path(), "scraped")
+#instancepath = os.path.join(instance_path(), "scraped")
 
 # load in parties and constituents data
 # if data is missing ask if scraping is wanted to be performed
 while True:
     try:
-        with open(os.path.join(instancepath, f"parties2.json"), "r", encoding='utf-8') as json_file:
+        with open(os.path.join(instancepath, f"parties.json"), "r", encoding='utf-8') as json_file:
             parties = json.load(json_file)
 
         with open(os.path.join(instancepath, f"constituencies.json"), "r", encoding='utf-8') as json_file:
@@ -22,7 +24,7 @@ while True:
         break
     except FileNotFoundError:
         text = input("Seems like you are missing some data. Do you want to scrape now, THIS MIGHT TAKE UP TO 35 minutes Y/N? (case sensitive)") 
-        if (text == "Y"):
+        if (text.upper() == "Y"):
             hae_dataa()
         else:
             raise Exception("You choose to not scrape: Missing data can't build")

@@ -1,52 +1,16 @@
-# AGORA ANALYTICA
+# Agora Analytica
 
-## Setup
-Create virtual environment in project root:
-```bash
-$ python3 -m virtualenv .venv
-# On windows
-$ .venv\Scripts\activate.bat
-# On Bash
-$ source .venv/bin/activate
-```
+Interactive network analysis of political candidates.
 
-Install dependencies:
-```bash
-(.venv) $ pip install -r requirements.txt
-```
+## Methology
 
-## Build
-If data is not manually downloaded into `instance/` folder, script can automatically download and process it:
-```bash
-(.venv) $ python3 cli.py download
-```
+Network is based on kinship; Distances between candidates – or nodes – is based how similarly they have answered. Similar answers lead to short distances. Answers are weighted on how exceptional this kind of answer is, in regards of question; Rare answers are weighted as more notable – in regards of distance approximation – than common answers. Only closest 3 are noted, and other distances are disregarded.
 
-Calculate distances into `instance/` directory. Limit should be kept at reasonable low number for now.
-```bash
-(.venv) $ python3 --debug cli.py build --method linear --limit 50
-```
+Text analysis is based on topic clustering. Using LDA, answers are categorized into topics. Comparing topics where two candidates are are furthest apart, links are selected for topics which represents topic into a one – outward – direction. Suitable topic word is selected individually, comparing how likely candidate is to use topic word, and how relevant – salient – word is for that topic.
 
-## Starting local development webserver
+## Licenses
 
-Windows ``command.com``
-
-```cmd
-> set FLASK_ENV=development
-> set FLASK_APP=agora_analytica.flask:app
-> flask run
-```
-
-Windows PowerShell
-
-```ps
-
-$env:FLASK_ENV = "development"
-$env:FLASK_APP = "agora_analytica.flask:app"
-flask run
-```
-
-Bash:
-
-```bash
-(.venv) $ FLASK_ENV=development FLASK_APP=agora_analytica.flask:app flask run
-```
+- **Agora Analytica** [Licensed under MIT](https://github.com/Agora-Analytica/prototyyppi/blob/master/LICENSE).
+- [**Yle Vaalidata**](https://yle.fi/uutiset/3-10725384) Licensed under Creative Commons. [Copyright Yle 2019](https://vaalikone.yle.fi/)
+- Additional party data from **WikiData**. Lincensed under Creative Commons Zero. Copyright Wikipedia Contributors.
+- Names are generated from most popular Finnish names. Nameset copyright Väestörekisterikeskus.
