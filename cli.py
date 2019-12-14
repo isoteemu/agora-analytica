@@ -5,6 +5,7 @@ import os.path
 import importlib
 from pathlib import Path
 from zipfile import ZipFile
+import re
 
 from agora_analytica import (
     instance_path,
@@ -54,10 +55,11 @@ def cli(debug, config):
 def deploy(target, url, force=False):
     if url is None:
         raise click.BadParameter("Please set instance asset url in INSTANCE_URL enviroment variable")
+    elif not re.match(r'^\w+://.*', url):
+        url = f"http://{url}"
 
-    if instance_path().exists() and not force:
-        logger.info("Skipping deployment; Instance folder exists")
-        return
+    if not isinstance(target, Path):
+        target = Path(target)
 
     logger.debug("Retrieving instance folder from %s", url)
     local_filename, headers = urllib.request.urlretrieve(url)
