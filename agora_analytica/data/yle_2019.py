@@ -24,7 +24,7 @@ import re
 
 from .utils import _instance_path, generate_names
 from . import DataSetInstance
-from .interpolation.combine import attach_data
+#from .interpolation.combine import attach_data
 
 logger = logging.getLogger(__name__)
 
@@ -175,29 +175,29 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
 
     #Delete rows that are "empty" (those who didn't answer any questions)
     #Done by checking if all the answers on a given row are either "-" or float type (nan value is float type)
-    df2 = df.loc[:, 'Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.':]
-    for i, row in df2.iterrows():
-        isnan = True
-        isempty = True
-        j = 0
-        val = df2.loc[i,:].values
-        lenght = len(row)
-        while ((isnan or isempty) and (j < lenght)):
-            isnan = isinstance(row[j], float)
-            isempty = row[j] == "-"
-            j += 1
-        if (isnan or isempty):
-            df = df.drop(i)
+    #df2 = df.loc[:, 'Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.':]
+    #for i, row in df2.iterrows():
+    #    isnan = True
+    #    isempty = True
+    #    j = 0
+    #    val = df2.loc[i,:].values
+    #    lenght = len(row)
+    #    while ((isnan or isempty) and (j < lenght)):
+    #        isnan = isinstance(row[j], float)
+    #        isempty = row[j] == "-"
+    #        j += 1
+    #    if (isnan or isempty):
+    #        df = df.drop(i)
 
     # Make new indexes after deleting rows
-    df.reset_index(drop=True, inplace=True)
+    #df.reset_index(drop=True, inplace=True)
     df.columns = df.columns.map(_clean_column)
 
 
     # Add names, if data has none.
-    if "name" not in df.columns:
-        names = pd.Series(generate_names(df.shape[0]), name="name")
-        df = df.assign(name=names)
+    #if "name" not in df.columns:
+    #    names = pd.Series(generate_names(df.shape[0]), name="name")
+    #    df = df.assign(name=names)
 
 
     #df = Yle2019E(df)
@@ -208,7 +208,7 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
     })
 
     #attach scraped data to dataframe
-    df = attach_data(df)
+    #df = attach_data(df)
 
     # Replace with np.NaN, as Yle is using "-" to indicate skipped and no opinion
     # values
