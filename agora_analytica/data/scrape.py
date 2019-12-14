@@ -21,9 +21,8 @@ def json_to_file(lista, name):
     """
     save json data to a json file with the given name
     """
-    f = open(os.path.join(path, f"{name}.json"),"w",encoding='utf-8')
-    json.dump(lista, f, ensure_ascii=False)
-    f.close()
+    with open(os.path.join(path, f"{name}.json"),"w",encoding='utf-8' ) as f:
+        json.dump(lista, f, ensure_ascii=False)
     return
 
 
@@ -52,6 +51,10 @@ def hae_dataa():
     """
     scrape data from yle
     """
+    url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/parties"
+    r = get(url)
+    cont = r.json()
+    json_to_file(cont, "parties")
 
     url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/constituencies/"
     r = get(url)
@@ -89,11 +92,6 @@ def hae_dataa():
                     break
         possible_not_foundcandidates.pop(0)
     
-
-    url = "https://vaalikone.yle.fi/eduskuntavaali2019/api/public/parties"
-    r = get(url)
-    cont = r.json()
-    json_to_file(cont, "parties")
     return
 
 

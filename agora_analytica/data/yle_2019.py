@@ -6,7 +6,6 @@ YLE EDUSKUNTAVAALIT 2019
 Functions for processing data from Yle Eduskuntavaalit 2019.
 
 """
-import os
 
 import logging
 # `BytesIO` tarjoaa liiman, jolla voidaan virtuaalisena tiedostona antaa
@@ -176,7 +175,6 @@ def delete_empty_rows(df: pd.DataFrame) -> pd.DataFrame:
         isnan = True
         isempty = True
         j = 0
-        val = df2.loc[i,:].values
         lenght = len(row)
         while ((isnan or isempty) and (j < lenght)):
             isnan = isinstance(row[j], float)
@@ -238,12 +236,10 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
     df = (df.replace("-", np.NaN))
 
 
+    #print(df)
     #deleting the leftover candidates we can't identify (only 2 at this point)
-    l = 0
-    for i, row in df.iterrows():
-        if isinstance(row['number'], float):
-            l += 1
-            df = df.drop(i)
+    df = df[df['number'] != str(None)]
+    #print(df)
 
     df = _convert_linear_into_int(df)
     logger.debug("Data Processed")
