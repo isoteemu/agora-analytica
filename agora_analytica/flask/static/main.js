@@ -5,6 +5,7 @@ function show_node_info(id){
     color = node_color(data)
     document.getElementById("modalheader").style.backgroundColor = color;
 
+    $("#candidateImage").attr("src", data.image)
     $("#candidateName").text("Name: " + data.name)
     $("#candidateNumber").text("Candidate number: " + data.number)
     $("#candidateParty").text("Party: " + data.party)
@@ -87,7 +88,9 @@ function ui_init_filters(nodes) {
         checkbox.attr("name", "party");
         checkbox.attr("value", party);
         
-        checkbox.on("click", function() {
+        checkbox.on("click", function() {checkboxClick(checkbox)})
+
+        /*checkbox.on("click", function() {
 
             const filter_rules = {
                 party: [],
@@ -100,7 +103,8 @@ function ui_init_filters(nodes) {
 
             // Kutsu filtteröintiä.
             graph_filter(filter_rules)
-        });
+        });*/
+
         list_item.find("label").prepend(checkbox)
         $("#filter-party").append(list_item);
     });
@@ -113,7 +117,9 @@ function ui_init_filters(nodes) {
         checkbox.attr("name", "constituency");
         checkbox.attr("value", constituency);
 
-        checkbox.on("click", function() {
+        checkbox.on("click", function() {checkboxClick(checkbox)})
+
+        /*checkbox.on("click", function() {
             
 
             const filter_rules = {
@@ -126,8 +132,25 @@ function ui_init_filters(nodes) {
             })
 
             graph_filter(filter_rules);
-        })
+        })*/
         list_item.find("label").prepend(checkbox)
         $("#filter-constituency").append(list_item);
     });
+
+    function checkboxClick(checkbox){
+
+        const filter_rules = {
+            party: [],
+            constituency: []
+        }
+
+         $("#filter-party input:not(:checked").each(function(){
+             filter_rules['party'].push($(this).val());
+         })
+         $("#filter-constituency input:not(:checked").each(function(){
+             filter_rules['constituency'].push($(this).val());
+         })
+
+            graph_filter(filter_rules);
+    }
 }
