@@ -3,6 +3,8 @@
 import logging
 import os.path
 import importlib
+from io import BytesIO
+from time import gmtime, strftime
 from pathlib import Path
 from zipfile import ZipFile
 import re
@@ -48,11 +50,24 @@ def cli(debug, config):
 
 @cli.command()
 @click.option("--target", type=click.Path(file_okay=False),
-                          default=Path.cwd(),
+                          default=(instance_path() / "..").resolve(),
                           show_default=True)
 @click.option("--url", default=os.environ.get("INSTANCE_URL", None),
                        show_default=True)
-def deploy(target, url, force=False):
+def deploy(target: Path, url: str, force=False):
+    """
+    Retrieve new instance data and extract it.
+
+    Performs simple "If-Modified-Since" check if existing instance data is found,
+    and updates only if necessary.
+    
+    Instance file pointed in :param:`url` should be zip file, with all instance data
+    inside `instance/` folder.
+
+    :param target: Target folder where to extract instance data.
+    :param url: Url where instance data is downloaded from. 
+
+    """
     if url is None:
         raise click.BadParameter("Please set instance asset url in INSTANCE_URL enviroment variable")
     elif not re.match(r'^\w+://.*', url):
@@ -61,11 +76,26 @@ def deploy(target, url, force=False):
     if not isinstance(target, Path):
         target = Path(target)
 
+    req = urllib.request.Request(url)
+
+    # Check for existing instance deployment.
+    _instance_path = target.joinpath("instance")
+    if _instance_path.exists() and not force:
+        logger.info("Instance path exists in folder %s, checking for update", _instance_path)
+        m_time = _instance_path.stat().st_mtime
+        req.add_header("If-Modified-Since", strftime("%a, %d %b %Y %I:%M:%S %Z", gmtime(m_time)))
+
     logger.debug("Retrieving instance folder from %s", url)
-    local_filename, headers = urllib.request.urlretrieve(url)
-    print(local_filename, headers)
-    with ZipFile(local_filename) as instance_zip:
-        instance_zip.extractall(target)
+    try:
+        with urllib.request.urlopen(req) as f:
+            with ZipFile(BytesIO(f.read())) as instance_zip:
+                instance_zip.extractall(target)
+                logger.info("Instance data extracted.")
+    except urllib.error.HTTPError as e:
+        if e.code == 304:
+            logger.info("Instance data not changed. Skipping update.")
+        else:
+            raise e
 
 
 @cli.command()
@@ -135,14 +165,18 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
 
     n = texts_df.shape[0]
 
+    talkinpoints = {}
+
     for a in range(n):
+        a_idx = texts_df.index[a]
         for b in range(a + 1, n):
-            a_idx = texts_df.index[a]
             b_idx = texts_df.index[b]
             r = topics.compare_rows(texts_df, a_idx, b_idx)
             if r:
                 words[(a_idx, b_idx)] = r[0][1]
                 words[(b_idx, a_idx)] = r[1][1]
+
+        talkinpoints[a_idx] = topics.find_talkingpoint(texts_df.loc[a_idx])
 
     click.echo("[DONE]")
 
@@ -153,7 +187,8 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
         "party": row.get("party"),
         "image": row.get("image", None),
         "constituency": row.get("vaalipiiri"),
-        "number": int(row.get("number", -1))
+        "number": int(row.get("number", -1)),
+        "talkinpoint": talkinpoints.get(int(idx), None)
     } for idx, row in df.replace(np.NaN, None).iterrows()]
 
     data_links = [{

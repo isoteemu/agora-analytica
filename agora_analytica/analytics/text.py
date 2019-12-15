@@ -13,6 +13,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation as LDA
 
 from itertools import chain
+from collections import namedtuple
 from typing import List, Dict, Tuple
 import logging
 
@@ -20,6 +21,8 @@ from cachetools import cached, LRUCache, LFUCache, keys
 
 logger = logging.getLogger(__name__)
 
+TopicComparision = namedtuple("TopicComparision", ["source", "target"])
+Topic = namedtuple("Topic", ["id", "term"])
 
 class VoikkoTokenizer():
 
@@ -172,6 +175,7 @@ class TextTopics():
         self._lda: LDA = None
         self.token_cache = {}
         self._tokenizer = None
+        self.min_sentence_length = 17
 
         # `kk` is used in assocation with time periods.
         self.stop_words += ["kk"]
@@ -237,6 +241,49 @@ class TextTopics():
         """ Cached wrapper for `VoikkoTokenizer.tokenize()` """
         return self.tokenizer().tokenize(text)
 
+    def find_talkingpoint(self, candidate: pd.Series) -> str:
+        """ Find most suitable sentence from text """
+        texts = tuple(candidate.dropna())
+        if len(texts) == 0:
+            return None
+
+        x = self._get_topics(texts)
+        return self.nearest_sentence(x[1], texts)
+
+    def nearest_sentence(self, topics: List[float], texts: List[str]) -> str:
+        """
+        Find sentence closest to topic.
+
+        TODO: When joining multiple sentences, it should be checked that they are from same paragraph.
+        """
+        @cached(LFUCache(maxsize=128))
+        def lda(sentences):
+            count_data = self._count_vector.transform(sentences)
+            _lda = self._lda.transform(count_data)
+            return _lda
+
+        # Tokenize into sentences.
+        sentences = chain(*[re.findall(r"\s*(.+?[\.!?])+", b, re.MULTILINE + re.DOTALL) for b in texts if b.strip() != ""])
+
+        # cleanup sentences.
+        sentences = tuple(set(filter(lambda x: len(x) > self.min_sentence_length, map(str.strip, sentences))))
+        if len(sentences) == 0:
+            return None
+
+        # Find most topical sentence.
+        tl_dr = []
+        distance = 1.
+        prev_sentence = ""
+        for current_sentence, m in zip(sentences, lda(sentences)):
+            _distance = np.abs(np.mean(topics - m))
+            if _distance < distance:
+                tl_dr, distance = ([prev_sentence, current_sentence], _distance)
+            
+            # Previous sentence is to provide context to most suitable sentence.
+            prev_sentence = current_sentence
+
+        return " ".join(filter(None, tl_dr))
+
     def compare_series(self, source: pd.Series, target: pd.Series):
         """
         Compare two text sets.
@@ -260,15 +307,23 @@ class TextTopics():
         y = self.row_topics(df, l)
         if not x or not y:
             return None
-        return self.compare_count_data(*x, *y)
 
-    @cached(LRUCache(maxsize=512), key=lambda self, df, idx: keys.hashkey(df.__class__, idx))
+        r = self.compare_count_data(*x, *y)
+        return r
+
     def row_topics(self, df: pd.DataFrame, idx):
         """ Return suitable topics from dataset `df` row :param:`idx` """
-        x = df.loc[idx].dropna()
+        x = tuple(df.loc[idx].dropna())
         if len(x) == 0:
             return None
+
         return self._get_topics(x)
+
+    @cached(LRUCache(maxsize=512))
+    def _get_topics(self, source: List) -> Tuple:
+
+        count_data = self._count_vector.transform(source)
+        return (count_data, self._lda.transform(count_data).mean(axis=0))
 
     def compare_count_data(self, counts_data_source, topics_source, counts_data_target, topics_target) -> Tuple[Tuple[str, int], Tuple[str, int]]:
         diffs = topics_source - topics_target
@@ -282,7 +337,10 @@ class TextTopics():
         word_for_source = self.suitable_topic_word(source_words) if len(source_words) else None
         word_for_target = self.suitable_topic_word(target_words) if len(target_words) else None
 
-        return ((topic_max, word_for_source), (topic_min, word_for_target))
+        return TopicComparision(
+            source=Topic(id=topic_max, term=word_for_source),
+            target=Topic(id=topic_min, term=word_for_target)
+        )
 
     def suggest_topic_word(self, A, B, topic_id: int) -> List[Tuple[int, float]]:
         """ Find relevant word for topic.
@@ -314,11 +372,6 @@ class TextTopics():
         # Generate list of words, ordered by prominence
         r = sorted([(i, prominence[i]) for i in prominence.argsort() if prominence[i] != 0 > -np.inf], key=lambda x: x[1], reverse=True)
         return r
-
-    def _get_topics(self, source) -> Tuple:
-
-        count_data = self._count_vector.transform(source)
-        return (count_data, self._lda.transform(count_data).mean(axis=0))
 
     # sequence list is too volatile to be cached.
     def suitable_topic_word(self, seq: List[List[int, ]]) -> str:

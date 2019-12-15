@@ -7,7 +7,6 @@ from flask import (
 )
 
 from . import instance_path
-from agora_analytica.data import yle_2019
 bp = Blueprint("", __name__)
 
 
@@ -23,26 +22,18 @@ def index():
     """ Default page """
     return render_template("main.html", data=[])
 
+
 @bp.route('/_lda')
 def show_lda():
     """ Debug function. Show Generated LDA """
     return send_from_directory(current_app.instance_path, "lda/%s/ldavis.html" % current_app.config["build"]["number_of_topics"])
+
 
 # Following functions are placeholders.
 @bp.route('/api/links.json')
 def data_links():
     return send_from_directory(current_app.instance_path, "links.json")
 
-@bp.route('/api/node/<id>.json')
-def node_getinfo(id):
-    # /api/node/4234.json
-    df = yle_2019.load_dataset()
-    id = int(id)
-    ehdokas = df.loc[id]
-
-    r = make_response(ehdokas.to_json(), 200)
-    r.mimetype = "application/json"
-    return r
 
 @bp.route('/api/nodes.json')
 def data_nodes():

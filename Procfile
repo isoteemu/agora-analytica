@@ -1,1 +1,1 @@
-web: python3 cli.py deploy; gunicorn agora_analytica.flask:app
+web: gunicorn agora_analytica.flask:app --log-file -
