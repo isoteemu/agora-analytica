@@ -24,10 +24,12 @@ import re
 
 from .utils import _instance_path, generate_names
 from . import DataSetInstance
+
 from .interpolation.combine import attach_data
 from .scrape import hae_dataa
 
 from .. import config
+
 
 logger = logging.getLogger(__name__)
 
@@ -213,9 +215,7 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
     logger.debug("Processing data... ")
     df = Yle2019E(df)
 
-
     df = delete_empty_rows(df)
-
 
     df.columns = df.columns.map(_clean_column)
     df = df.rename(columns={
@@ -224,6 +224,7 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
 
 
     #attach scraped data to dataframe
+
     if Config.getboolean("build", "allow_dirty", fallback=False):
         try:
             df = attach_data(df)

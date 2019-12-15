@@ -24,7 +24,78 @@ $('.modal-backdrop').removeClass("modal-backdrop");
 $(".modal-dialog").draggable({
     "handle":".modal-header",
     "containment":"window"
-});
+
+function ui_init_filters(nodes) {
+    // Kerää puolueet ja vaalipiirit solmuista
+    const parties = []
+    const constituencies = []
+
+    console.log(nodes)
+
+    nodes.forEach(node => {
+
+        var party = node.party
+        var constituency = node.constituency
+
+        if (parties.indexOf(party) == -1) {
+            parties.push(party)
+        }
+        if(constituencies.indexOf(constituency) == -1){
+            constituencies.push(constituency)
+        }
+    });
+
+    console.log(parties, constituencies)
+
+    parties.forEach(function(party) {
+
+        let list_item = $("<li><label>").text(party);
+        let checkbox = $("<input type =\"checkbox\" checked>")
+        checkbox.attr("name", "party");
+        checkbox.attr("value", party);
+        
+        checkbox.on("click", function() {
+
+            const filter_rules = {
+                parties: [],
+                constituencies: []
+            }
+
+            $("#filter-party input:not(:checked").each(function(){
+                filter_rules['parties'].push($(this).val());
+            })
+
+            // Kutsu filtteröintiä.
+            graph_filter(filter_rules)
+        });
+        list_item.prepend(checkbox)
+        $("#filter-party").append(list_item);
+    });
+
+    constituencies.forEach(function(constituency) {
+        let list_item = $("<li><label>").text(constituency);
+        let checkbox = $("<input type =\"checkbox\" checked>")
+        checkbox.attr("name", "constituency");
+        checkbox.attr("value", constituency);
+
+        checkbox.on("click", function() {
+            
+
+            const filter_rules = {
+                parties: [],
+                constituencies: []
+            }
+
+            $("#filter-constituency input:not(:checked").each(function(){
+                filter_rules['constituencies'].push($(this).val());
+            })
+
+            graph_filter(filter_rules);
+        })
+        list_item.prepend(checkbox)
+        $("#filter-constituency").append(list_item);
+    });
+}
 
 const rel_el = $("#candidateRelated");
 // Remove old html nodes.
@@ -60,5 +131,4 @@ graph.links.filter((x) => x.target.id == id || x.source.id == id).sort((a, b) =>
     rel_el.append(el);
 
 })
-
 }
