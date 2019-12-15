@@ -140,6 +140,22 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
 
     if limit < 2:
         raise click.BadParameter("Build should include more than 2 candidates.", param_hint="--limit")
+
+    preferred_list_file = settings.get("build", "preferred_candidates")
+
+    if preferred_list_file:
+        with open(preferred_list_file) as fp:
+            # Fetch all preferred candidates by row, skipping ones beginning with `#`
+            preferred_candidates = filter(lambda x: x != "" and x[0] != "#", map(str.strip, fp.readlines()))
+        # Slice preferred candidates
+        preferred_filter = df["name"].isin(preferred_candidates)
+        preferred = df[preferred_filter]
+
+        # Fill to a required ammount with sampled data
+        df = preferred.append(df[~preferred_filter].sample(max(limit - preferred.shape[0], 0)))
+        del preferred, preferred_filter
+
+    # sample to a correct size
     df = df.sample(min(limit, df.shape[0]))
     click.echo("[DONE]")
 
