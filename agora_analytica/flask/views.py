@@ -26,7 +26,7 @@ def index():
 @bp.route('/_lda')
 def show_lda():
     """ Debug function. Show Generated LDA """
-    return send_from_directory(current_app.instance_path, "lda/10/ldavis.html")
+    return send_from_directory(current_app.instance_path, "lda/%s/ldavis.html" % current_app.config["build"]["number_of_topics"])
 
 # Following functions are placeholders.
 @bp.route('/api/links.json')

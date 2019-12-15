@@ -24,7 +24,12 @@ import re
 
 from .utils import _instance_path, generate_names
 from . import DataSetInstance
-#from .interpolation.combine import attach_data
+
+from .interpolation.combine import attach_data
+from .scrape import hae_dataa
+
+from .. import config
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +38,8 @@ DATASET_NAME = "Avoin_data_eduskuntavaalit_2019_valintatiedot.csv"
 
 # Dataset default path
 DATASET_PATH = _instance_path(DATASET_NAME)
+
+Config = config()
 
 # column to use for dataframe index.
 INDEX = "key"
@@ -143,15 +150,50 @@ def download_dataset(filepath=DATASET_PATH, url=DATASET_URL, **kwargs) -> pd.Dat
         # Puretaan haluttu tiedosto, ja kääritään pandan dataframen ympärille.
         data = pd.read_csv(BytesIO(pakattu_tiedosto.read(DATASET_NAME)))
 
+        # Add names, if data has none.
+        if "name" not in data.columns:
+            logger.debug("Names are missing. Generating fake names.")
+            names = pd.Series(generate_names(data.shape[0]), name="name")
+            data = data.assign(name=names)
+
         data.to_csv(filepath, index_label=INDEX)
-        logger.debug("File downloaded as:", filepath)
+        logger.debug("File downloaded as: %s", filepath)
+
+    # Scrape extra bits.
+    if Config.getboolean("build", "allow_dirty", fallback=False):
+        hae_dataa()
 
     return data
 
+def delete_empty_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Delete rows that are "empty" (those who didn't answer any questions) 
+    Done by checking if all the answers on a given row are either "-" or float type (nan value is float type)
+    Also counts new indexes after deleting rows, so there isn't missing in-between index numbers
+    """
+    
+    df2 = df.loc[:, 'Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.':'On oikein nähdä vaivaa sen eteen, ettei vahingossakaan loukkaa toista.'].join(df.loc[:, 'Uusimaa. Kaatolupia on myönnettävä nykyistä enemmän susikannan rajoittamiseksi.':])
+    for i, row in df2.iterrows():
+        isnan = True
+        isempty = True
+        j = 0
+        lenght = len(row)
+        while ((isnan or isempty) and (j < lenght)):
+            isnan = isinstance(row[j], float)
+            isempty = row[j] == "-"
+            j += 1
+        if (isnan or isempty):
+            df = df.drop(i)
+
+    # Make new indexes after deleting rows
+    df.reset_index(drop=True, inplace=True)
+    df.columns = df.columns.map(_clean_column)
+    
+    return df
 
 def load_dataset(filename: str = DATASET_PATH) -> pd.DataFrame:
     """ Read dataset """
-
+    
     # Warn if dataset has been previously opened
     key = f"{__name__}.{filename}"
     dataset_loaded = globals().setdefault(key, False)
@@ -173,51 +215,35 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
     logger.debug("Processing data... ")
     df = Yle2019E(df)
 
-    #Delete rows that are "empty" (those who didn't answer any questions)
-    #Done by checking if all the answers on a given row are either "-" or float type (nan value is float type)
-    #df2 = df.loc[:, 'Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.':]
-    #for i, row in df2.iterrows():
-    #    isnan = True
-    #    isempty = True
-    #    j = 0
-    #    val = df2.loc[i,:].values
-    #    lenght = len(row)
-    #    while ((isnan or isempty) and (j < lenght)):
-    #        isnan = isinstance(row[j], float)
-    #        isempty = row[j] == "-"
-    #        j += 1
-    #    if (isnan or isempty):
-    #        df = df.drop(i)
+    df = delete_empty_rows(df)
 
-    # Make new indexes after deleting rows
-    #df.reset_index(drop=True, inplace=True)
-    df.columns = df.columns.map(_clean_column)
-
-
-    # Add names, if data has none.
-    #if "name" not in df.columns:
-    #    names = pd.Series(generate_names(df.shape[0]), name="name")
-    #    df = df.assign(name=names)
-
-
-    #df = Yle2019E(df)
     df.columns = df.columns.map(_clean_column)
     df = df.rename(columns={
         "puolue": "party",
-        "nimi": "name"
     })
 
+
     #attach scraped data to dataframe
-    #df = attach_data(df)
+
+    if Config.getboolean("build", "allow_dirty", fallback=False):
+        try:
+            df = attach_data(df)
+        except Exception as e:
+            logger.exception(e)
+            logger.warning("Could not extend dataset with scraped data.")
 
     # Replace with np.NaN, as Yle is using "-" to indicate skipped and no opinion
     # values
-    df = df.replace("-", np.NaN)
+    df = (df.replace("-", np.NaN))
 
+
+    #print(df)
+    #deleting the leftover candidates we can't identify (only 2 at this point)
+    df = df[df['number'] != str(None)]
+    #print(df)
 
     df = _convert_linear_into_int(df)
-    print("[data processed]")
-    #print(df)
+    logger.debug("Data Processed")
     return df
 
 
