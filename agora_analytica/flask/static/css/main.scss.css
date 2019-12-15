@@ -1,38 +1,57 @@
+body {
+  overflow: hidden; }
+
+h1 {
+  font-size: larger; }
+
 footer {
   position: absolute;
   bottom: 0;
   width: 100%;
-  /*background-color:#002957;
-  color: #f1563f;*/
- }
+  background-color: #002957;
+  color: #f1563f; }
 
-.modal-header{
-  color: white;
-}
+.modal-header {
+  color: white; }
 
-.modal-dialog{
-  margin: 0;
-}
+.modal-dialog {
+  margin: 0; }
 
-.navbar{
-  background-color:#002957;
-  color: #f1563f;
-}
+.navbar {
+  background-color: #002957;
+  color: #f1563f; }
 
-
-.btn.btn-custom{
+.btn.btn-custom {
   background-color: #f1563f;
   color: white;
   border-radius: 5;
   padding-left: 10px;
   padding-top: 5px;
   padding-bottom: 5px;
-  padding-right: 15px;
-}
+  padding-right: 15px; }
 
-.modal-header{
-  cursor: move;
-}
+.modal-header {
+  cursor: move; }
+
+#candidateInformationModal #candidateTalkinpoint {
+  font-style: italic;
+  padding-left: 1rem; }
+  #candidateInformationModal #candidateTalkinpoint::before, #candidateInformationModal #candidateTalkinpoint::after {
+    position: absolute;
+    display: inline-block;
+    vertical-align: top;
+    line-height: 1.5rem;
+    font-size: 1.5rem;
+    opacity: .2;
+    margin-left: -1.5rem; }
+  #candidateInformationModal #candidateTalkinpoint::before {
+    content: '\201C';
+    margin-right: 4px;
+    margin-left: -8px; }
+  #candidateInformationModal #candidateTalkinpoint::after {
+    content: '\201D';
+    margin-left: 4px;
+    margin-right: -8px; }
 
 #candidateInformationModal #candidateRelated .candidate {
   cursor: pointer;
@@ -49,7 +68,8 @@ footer {
     padding: 0 0.3rem;
     text-align: center;
     color: #000;
-    position: relative; }
+    position: relative;
+    z-index: 1; }
     #candidateInformationModal #candidateRelated .candidate .topic-bubble::before {
       content: "";
       width: 0px;
@@ -73,7 +93,7 @@ footer {
       left: 24px;
       bottom: -13px; }
   #candidateInformationModal #candidateRelated .candidate img.node {
-    transition: all 0.5s;
+    transition: all 0.3s;
     border-radius: 50%;
     border-style: solid;
     border-width: 5px;
