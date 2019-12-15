@@ -68,7 +68,7 @@ class Yle2019E(DataSetInstance):
     _text_space = [
         ("Suomen pitää olla edelläkävijä ilmastonmuutoksen vastaisessa taistelussa, vaikka se aiheuttaisi suomalaisille kustannuksia.1", "On oikein nähdä vaivaa sen eteen, ettei vahingossakaan loukkaa toista.1"),
         ("Mitkä ovat kolme vaalilupaustasi? Vaalilupaus 1:", "Mitkä ovat kolme vaalilupaustasi? Vaalilupaus 3:"),
-        ("Miksi juuri sinut pitäisi valita eduskuntaan?","Mitä pelkäät? (Yle Kioskin vaalikonetta varten.)"),
+        ("Miksi juuri sinut pitäisi valita eduskuntaan?", "Miksi juuri sinut pitäisi valita eduskuntaan?"),
         ("Uusimaa. Kaatolupia on myönnettävä nykyistä enemmän susikannan rajoittamiseksi.1","Uusimaa. Metro tulee jatkaa Helsingistä Sipooseen.1"),
         ("Helsinki. Kun Helsinki sulkee hiilivoimaloita, voidaan korvaavaa energiaa tuottaa ydinvoimalla.1","Helsinki. Metro tulee jatkaa Helsingistä Sipooseen.1"),
         ("Varsinais-Suomi. Kaatolupia on myönnettävä nykyistä enemmän susi-, merimetso- ja hyljekantojen rajoittamiseksi.1","Varsinais-Suomi. Saariston yhteysalusliikenteen jatkuvuuden turvaamiseksi liikenteen tulisi olla maksullista kesäasukkaille ja matkailijoille.1"),
