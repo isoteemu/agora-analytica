@@ -142,7 +142,7 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
     if limit < 2:
         raise click.BadParameter("Build should include more than 2 candidates.", param_hint="--limit")
 
-    preferred_list_file = settings.get("build", "preferred_candidates")
+    preferred_list_file = settings.get("build", "preferred_candidates", fallback=None)
 
     if preferred_list_file:
         with open(preferred_list_file) as fp:
