@@ -5,7 +5,7 @@ function show_node_info(id){
     color = node_color(data)
     document.getElementById("modalheader").style.backgroundColor = color;
 
-    $("#candidateImage").attr("src", data.image)
+    $("#candidateImage").attr("src", (data.image) ? data.image : default_image)
     $("#candidateName").text("Name: " + data.name)
     $("#candidateNumber").text("Candidate number: " + data.number)
     $("#candidateParty").text("Party: " + data.party)
@@ -61,8 +61,6 @@ function ui_init_filters(nodes) {
     const parties = []
     const constituencies = []
 
-    console.log(nodes)
-
     nodes.forEach(node => {
 
         var party = node.party
@@ -76,14 +74,11 @@ function ui_init_filters(nodes) {
         }
     });
 
-    console.log(parties, constituencies)
-
     parties.forEach(function(party) {
 
         let list_item = $("<li><label>");
         list_item.find("label").text(party);
 
-        console.log(list_item)
         let checkbox = $("<input type =\"checkbox\" checked>")
         checkbox.attr("name", "party");
         checkbox.attr("value", party);
@@ -151,6 +146,6 @@ function ui_init_filters(nodes) {
              filter_rules['constituency'].push($(this).val());
          })
 
-            graph_filter(filter_rules);
+        graph_filter(filter_rules);
     }
 }
