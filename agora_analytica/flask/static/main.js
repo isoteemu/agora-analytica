@@ -2,6 +2,10 @@ function show_node_info(id){
     // Find correct node from nodes
     data = graph.nodes.find((x) => x.id == id);
 
+    $("svg.graph .nodes .node").removeClass("active");
+    const dom_node = $("svg.graph .nodes .node")[data.index];
+    $(dom_node).addClass("active")
+
     color = node_color(data)
     document.getElementById("modalheader").style.backgroundColor = color;
 
@@ -31,11 +35,19 @@ function show_node_info(id){
             node = link.target;
             topic = link.target_term;
         }
-
         // Create new element from template, and populate values.
         let el = $(template)
             .attr("title", node.number+": "+node.name+"\n"+node.party+"\n"+node.constituency)
-            .click(() => show_node_info(node.id));
+            .click(() => show_node_info(node.id))
+            // .hover(function() {
+            //     const _n = document.querySelectorAll(".nodes .node")[node.index];
+            //     $(_n).addClass("hover");
+            //     redraw();
+            // }, function() {
+            //     const _n = document.querySelectorAll(".nodes .node")[node.index];
+            //     $(_n).removeClass("hover");
+            //     redraw();
+            // });
         $("img.node", el)
             .attr("src", node.image ? node.image : default_image)
             .attr("style", "border-color:"+node_color(node))
@@ -82,7 +94,7 @@ function ui_init_filters(nodes) {
         let checkbox = $("<input type =\"checkbox\" checked>")
         checkbox.attr("name", "party");
         checkbox.attr("value", party);
-        
+
         checkbox.on("click", function() {checkboxClick(checkbox)})
 
         /*checkbox.on("click", function() {
@@ -115,7 +127,7 @@ function ui_init_filters(nodes) {
         checkbox.on("click", function() {checkboxClick(checkbox)})
 
         /*checkbox.on("click", function() {
-            
+
 
             const filter_rules = {
                 party: [],
