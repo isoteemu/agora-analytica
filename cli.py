@@ -203,7 +203,7 @@ def build(target, method: list, dataset_name, limit: int, number_of_topics):
         "name": row.get("name"),
         "party": row.get("party"),
         "image": row.get("image", None),
-        "constituency": row.get("vaalipiiri"),
+        "constituency": row.get("constituency"),
         "number": int(row.get("number", -1)),
         "talkinpoint": talkinpoints.get(int(idx), None)
     } for idx, row in df.replace(np.NaN, None).iterrows()]

@@ -54,6 +54,7 @@ def load_dataset(path=instance_path(), questions_file="questions-643546388470169
             "gender": data['gender'],
             "image": data['image'],
             "description": data['text'],
+            "constituency": data['tiedekunta'],
         }
         df.loc[i] = c_data
 
