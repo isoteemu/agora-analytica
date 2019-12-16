@@ -21,6 +21,7 @@ import pandas as pd
 import requests
 
 import re
+from collections import Counter
 
 from .utils import _instance_path, generate_names
 from . import DataSetInstance
@@ -150,12 +151,6 @@ def download_dataset(filepath=DATASET_PATH, url=DATASET_URL, **kwargs) -> pd.Dat
         # Puretaan haluttu tiedosto, ja kääritään pandan dataframen ympärille.
         data = pd.read_csv(BytesIO(pakattu_tiedosto.read(DATASET_NAME)))
 
-        # Add names, if data has none.
-        if "name" not in data.columns:
-            logger.debug("Names are missing. Generating fake names.")
-            names = pd.Series(generate_names(data.shape[0]), name="name")
-            data = data.assign(name=names)
-
         data.to_csv(filepath, index_label=INDEX)
         logger.debug("File downloaded as: %s", filepath)
 
@@ -223,8 +218,7 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
     })
 
 
-    #attach scraped data to dataframe
-
+    # attach scraped data to dataframe
     if Config.getboolean("build", "allow_dirty", fallback=False):
         try:
             df = attach_data(df)
@@ -234,13 +228,23 @@ def process_data(df: pd.DataFrame) -> Yle2019E:
 
     # Replace with np.NaN, as Yle is using "-" to indicate skipped and no opinion
     # values
-    df = (df.replace("-", np.NaN))
+    df = df.replace("-", np.NaN)
 
+    # Add fake data
+    if "name" not in df.columns:
+        logger.debug("Names are missing. Generating fake names.")
+        names = pd.Series(generate_names(df.shape[0]), name="name")
+        df = df.assign(name=names)
 
-    #print(df)
+    if "number" not in df.columns:
+        numbers = Counter()
+        df["number"] = pd.Series()
+        for i, r in df.iterrows():
+            numbers[r['vaalipiiri']] += 1
+            r['number'] = numbers[r['vaalipiiri']]
+
     #deleting the leftover candidates we can't identify (only 2 at this point)
     df = df[df['number'] != str(None)]
-    #print(df)
 
     df = _convert_linear_into_int(df)
     logger.debug("Data Processed")
